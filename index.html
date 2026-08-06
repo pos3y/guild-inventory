@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คลังกิลด์ - Guild Inventory</title>
+    <!-- ใช้ PapaParse สำหรับดึงข้อมูลจาก Google Sheet -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <style>
+        /* ธีมสีเข้มแบบเกมเมอร์ */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #1e1e24; 
+            color: #ecf0f1; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: #2b2b36; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5); 
+        }
+        h1 { 
+            text-align: center; 
+            color: #f1c40f; 
+            border-bottom: 2px solid #444; 
+            padding-bottom: 15px; 
+            margin-top: 0;
+        }
+        
+        /* ช่องค้นหา */
+        input[type="text"] { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            border: 1px solid #444; 
+            border-radius: 6px; 
+            background: #3f3f4e; 
+            color: white; 
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus { outline: none; border-color: #f1c40f; }
+
+        /* ตาราง */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 16px;
+        }
+        th, td { 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #444; 
+        }
+        th { 
+            background-color: #f1c40f; 
+            color: #1e1e24; 
+            font-weight: bold;
+        }
+        tr:hover { background-color: #3f3f4e; }
+        
+        /* ไฮไลต์ตัวเลข */
+        .highlight { 
+            background-color: #e74c3c; 
+            padding: 4px 10px; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            table { display: block; overflow-x: auto; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📦 คลังไอเท็มกิลด์</h1>
+    
+    <!-- ช่องพิมพ์ค้นหาไอเท็ม -->
+    <input type="text" id="searchInput" placeholder="🔍 ค้นหาชื่อไอเท็ม..." onkeyup="filterTable()">
+
+    <table id="guildTable">
+        <thead>
+            <tr id="tableHeader"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    // 🔴 วางลิงก์ CSV จาก Google Sheets ตรงนี้ 🔴
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=528287579&single=true&output=csv';
+
+    Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        complete: function(results) {
+            const data = results.data;
+            const thead = document.getElementById('tableHeader');
+            const tbody = document.getElementById('tableBody');
+
+            // 1. สร้างหัวตาราง
+            if(data.length > 0) {
+                Object.keys(data[0]).forEach(header => {
+                    let th = document.createElement('th');
+                    th.textContent = header;
+                    thead.appendChild(th);
+                });
+            }
+
+            // 2. ดึงข้อมูลลงตาราง
+            data.forEach(row => {
+                if(Object.values(row).join('').trim() === '') return;
+
+                let tr = document.createElement('tr');
+                Object.values(row).forEach((val, index) => {
+                    let td = document.createElement('td');
+                    // ทำให้คอลัมน์ D (คงเหลือ) มีสีไฮไลต์ (index เริ่มจาก 0,1,2,3)
+                    if(index === 3) {
+                        td.innerHTML = `<span class="highlight">${val}</span>`;
+                    } else {
+                        td.textContent = val;
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+    });
+
+    // ฟังก์ชันค้นหาไอเท็ม
+    function filterTable() {
+        let input = document.getElementById("searchInput");
+        let filter = input.value.toUpperCase();
+        let table = document.getElementById("guildTable");
+        let tr = table.getElementsByTagName("tr");
+        for (let i = 1; i < tr.length; i++) {
+            let td = tr[i].getElementsByTagName("td")[0]; // ค้นหาจากคอลัมน์ A (ชื่อไอเท็ม)
+            if (td) {
+                let txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }       
+        }
+    }
+</script>
+
+</body>
+</html>
