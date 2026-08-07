@@ -123,22 +123,22 @@
 <div class="container">
     <h1>☁️ Guild Storage</h1>
 
-    <!-- เมนู Tabs -->
+    <!-- สลับตำแหน่งเมนู Tabs และให้คลังกิลด์เป็น active -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('page-members')">👥 สมาชิก</button>
-        <button class="tab-btn" onclick="switchTab('page-items')">📦 คลังกิลด์</button>
+        <button class="tab-btn active" onclick="switchTab('page-items')">📦 คลังกิลด์</button>
+        <button class="tab-btn" onclick="switchTab('page-members')">👥 สมาชิก</button>
         <button class="tab-btn" onclick="switchTab('page-logs')">📝 ประวัติ</button>
     </div>
 
-    <!-- 1. หน้าสมาชิก -->
-    <div id="page-members" class="page active">
-        <div class="grid-layout" id="membersGrid"></div>
-    </div>
-
-    <!-- 2. หน้าคลังไอเท็ม -->
-    <div id="page-items" class="page">
+    <!-- 1. หน้าคลังไอเท็ม (ย้ายมาเป็นหน้าแรกและใส่ class active) -->
+    <div id="page-items" class="page active">
         <div id="goldBannerContainer"></div>
         <div class="grid-layout" id="itemsGrid"></div>
+    </div>
+
+    <!-- 2. หน้าสมาชิก -->
+    <div id="page-members" class="page">
+        <div class="grid-layout" id="membersGrid"></div>
     </div>
 
     <!-- 3. หน้าประวัติ -->
@@ -197,7 +197,6 @@
         let balances = {};
         dataDeposit.forEach(row => {
             if (row['ชื่อไอเท็ม'] === itemName) {
-                // อัปเดต: รองรับทั้งคำว่า "อยู่ที่" และ "อยู่ที่ใคร"
                 let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
                 let status = row['สถานะ'] || '';
                 let qty = parseInt(row['จำนวน']) || 0;
@@ -303,7 +302,6 @@
         reversedData.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
             
-            // อัปเดต: รองรับทั้งคำว่า "อยู่ที่" และ "อยู่ที่ใคร"
             let holderName = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
             let sColor = getStatusColor(row['สถานะ']);
             let actionText = row['สถานะ']?.includes('ขาย') ? '💰 นำไปขายโดย' : '➔';
@@ -339,7 +337,6 @@
         } else {
             reversedLogs.forEach(record => {
                 let sColor = getStatusColor(record['สถานะ']);
-                // อัปเดต: รองรับทั้งคำว่า "อยู่ที่" และ "อยู่ที่ใคร"
                 let holderName = record['อยู่ที่'] || record['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
 
                 holderList.innerHTML += `
