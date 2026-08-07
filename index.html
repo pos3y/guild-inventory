@@ -36,7 +36,7 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ตัวกรอง (Filter Bar) สำหรับไอเท็ม --- */
+        /* --- ตัวกรอง (Filter Bar) --- */
         .filter-bar {
             display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
         }
@@ -59,9 +59,9 @@
         .gold-title { font-size: 18px; font-weight: 600; color: #d4af37; display: flex; align-items: center; gap: 10px; }
         .gold-amount { font-size: 24px; font-weight: 600; color: #4a4a4a; }
 
-        /* --- ส่วนของ Grid สมาชิก --- */
+        /* --- ส่วนของ Grid สมาชิก (แนวนอน) --- */
         .grid-layout { display: grid; gap: 15px; }
-        .members-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+        .members-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } /* ขยายให้กว้างขึ้น */
         
         .role-section-title {
             color: #7cb9e8; font-size: 18px; font-weight: 600; 
@@ -69,15 +69,20 @@
             border-bottom: 2px dashed #e1eff9; display: flex; align-items: baseline; gap: 10px;
         }
 
-        /* การ์ดสมาชิก */
+        /* การ์ดสมาชิก (เปลี่ยนเป็นสี่เหลี่ยมผืนผ้าแนวนอน) */
         .member-card { 
-            background: white; border-radius: 20px; padding: 15px 10px; 
-            text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.04); 
+            background: white; border-radius: 16px; padding: 12px 15px; 
+            display: flex; align-items: center; gap: 15px; text-align: left;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
             cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;
         }
-        .member-card:hover { transform: translateY(-5px); border-color: #ffe4e1; box-shadow: 0 8px 25px rgba(255,139,148,0.15); }
-        .member-card .item-icon { font-size: 32px; margin-bottom: 5px; }
-        .member-card .card-title { font-size: 13px; margin-bottom: 5px; font-weight: 600; }
+        .member-card:hover { transform: translateY(-3px); border-color: #ffe4e1; box-shadow: 0 6px 15px rgba(255,139,148,0.15); }
+        .member-card .item-icon { font-size: 30px; margin-bottom: 0; }
+        .member-card .member-info { display: flex; flex-direction: column; }
+        .member-card .card-title { font-size: 14px; margin-bottom: 2px; font-weight: 600; }
+        .member-card .badges { display: flex; align-items: center; gap: 6px; }
+        .member-card .card-badge { margin: 0; padding: 2px 8px; font-size: 11px; }
+        .member-card .sub-class-text { margin: 0; font-size: 11px; color: #aaa; }
 
         /* --- ส่วนของ List (คลังไอเท็มแบบบรรทัด) --- */
         .item-list-container { display: flex; flex-direction: column; gap: 12px; }
@@ -98,10 +103,6 @@
         
         /* ขวา: สถานะ + คนยืม */
         .item-row-right { text-align: right; }
-        .item-row-right .active-users-box { 
-            margin-top: 5px; padding: 4px 8px; font-size: 10px; 
-            border-radius: 8px; display: inline-block; text-align: right;
-        }
         
         /* ป้ายต่างๆ */
         .card-badge { 
@@ -110,9 +111,12 @@
         }
         .card-badge.red { background: #fff0f0; color: #ff8b94; }
         .card-badge.gray { background: #f0f0f0; color: #999; }
-        .sub-class-text { font-size: 11px; color: #aaa; font-weight: 400; }
 
-        .active-users-box { background: #fdf5f6; border: 1px dashed #ffc6c9; color: #666; }
+        .active-users-box { 
+            margin-top: 5px; padding: 4px 8px; font-size: 10px; 
+            border-radius: 8px; display: inline-block; text-align: right;
+            background: #fdf5f6; border: 1px dashed #ffc6c9; color: #666;
+        }
         .active-users-title { color: #ff8b94; font-weight: 600; font-size: 10px;}
 
         /* --- หน้า Log --- */
@@ -174,7 +178,7 @@
         <div class="item-list-container" id="itemsGrid"></div>
     </div>
 
-    <!-- 2. หน้าสมาชิก (เปลี่ยนเป็น Container โล่งๆ เพื่อสร้างบล็อกข้างใน) -->
+    <!-- 2. หน้าสมาชิก -->
     <div id="page-members" class="page">
         <div id="membersContainer"></div>
     </div>
@@ -230,7 +234,6 @@
         event.currentTarget.classList.add('active');
     }
 
-    // กรองไอเท็ม
     function filterItems(category, event) {
         currentItemFilter = category;
         event.target.parentElement.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -306,12 +309,11 @@
         return holdingItems;
     }
 
-    // --- วาดหน้าสมาชิก (แบ่งเป็น 3 บล็อก DPS, Tank, Support) ---
+    // --- วาดหน้าสมาชิก (ดีไซน์การ์ดแนวนอน) ---
     function renderMembers() {
         const container = document.getElementById('membersContainer');
         container.innerHTML = '';
         
-        // กำหนดหมวดหมู่ที่ต้องการแยก
         const roles = [
             { id: 'DPS', icon: '⚔️', title: 'DPS' },
             { id: 'Tank', icon: '🛡️', title: 'Tank' },
@@ -319,12 +321,9 @@
         ];
 
         roles.forEach(roleGroup => {
-            // คัดกรองคนตามตำแหน่ง
             let filteredMembers = dataMembers.filter(row => row['ตำแหน่ง(หลัก)'] === roleGroup.id && row['ชื่อตัวละคร (IGN)']);
             
-            // ถ้ามีคนในตำแหน่งนี้ ให้สร้างบล็อกขึ้นมา
             if (filteredMembers.length > 0) {
-                // สร้างหัวข้อบล็อก พร้อมบอกจำนวนคน
                 let sectionHtml = `
                     <h3 class="role-section-title">
                         ${roleGroup.icon} ${roleGroup.title} 
@@ -333,7 +332,6 @@
                     <div class="grid-layout members-grid">
                 `;
                 
-                // สร้างการ์ดคนในตำแหน่งนี้
                 filteredMembers.forEach(row => {
                     let memberName = row['ชื่อตัวละคร (IGN)'];
                     let mainClass = row['อาชีพ / คลาส'] || '';
@@ -344,25 +342,25 @@
                     if(subClass) classHtml += `<div class="sub-class-text">${subClass}</div>`;
 
                     let holdingItems = getBorrowedItemsByMember(memberName);
-                    
                     let safeName = encodeURIComponent(memberName);
                     let safeMainClass = encodeURIComponent(mainClass);
                     let safeSubClass = encodeURIComponent(subClass);
                     let safeHoldingData = encodeURIComponent(JSON.stringify(holdingItems));
 
+                    // HTML ของ Member Card แบบแนวนอน
                     sectionHtml += `
                         <div class="member-card" onclick="openMemberModal('${safeName}', '${roleGroup.icon}', '${safeMainClass}', '${safeSubClass}', '${safeHoldingData}')">
-                            <div>
-                                <div class="item-icon">${roleGroup.icon}</div>
+                            <div class="item-icon">${roleGroup.icon}</div>
+                            <div class="member-info">
                                 <div class="card-title">${memberName}</div>
-                                <div>${classHtml}</div>
+                                <div class="badges">${classHtml}</div>
                             </div>
                         </div>
                     `;
                 });
 
-                sectionHtml += `</div>`; // ปิดกริด
-                container.innerHTML += sectionHtml; // นำบล็อกไปแปะในหน้าเว็บ
+                sectionHtml += `</div>`; 
+                container.innerHTML += sectionHtml; 
             }
         });
 
@@ -371,7 +369,7 @@
         }
     }
 
-    // --- วาดหน้าไอเท็มแบบ List ---
+    // --- วาดหน้าไอเท็มแบบ List (เรียง A-Z) ---
     function renderItems() {
         const grid = document.getElementById('itemsGrid');
         const goldContainer = document.getElementById('goldBannerContainer');
@@ -380,8 +378,8 @@
         let goldItem = dataItems.find(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() === 'gold');
         let otherItems = dataItems.filter(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() !== 'gold');
 
-        // --- เพิ่มคำสั่งกลับด้าน Array (ของที่อยู่ล่างสุดใน Sheet จะขึ้นมาอยู่บนสุดของเว็บ) ---
-        otherItems.reverse();
+        // 🛑 เพิ่มคำสั่งจัดเรียงไอเท็มตามชื่ออักษร (A-Z, ก-ฮ)
+        otherItems.sort((a, b) => a['ชื่อไอเท็ม'].localeCompare(b['ชื่อไอเท็ม'], 'th'));
 
         if (currentItemFilter !== 'All') {
             otherItems = otherItems.filter(row => {
