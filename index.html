@@ -65,7 +65,7 @@
             display: flex; flex-direction: column; justify-content: space-between;
         }
         .card:hover { transform: translateY(-5px); border-color: #ffe4e1; box-shadow: 0 8px 25px rgba(255,139,148,0.15); }
-        .card.sold-out { opacity: 0.6; filter: grayscale(50%); } /* ไอเท็มหมด/ขายหมดแล้วจะสีซีดลง */
+        .card.sold-out { opacity: 0.6; filter: grayscale(50%); } 
         
         /* ตกแต่งข้อมูลในการ์ด */
         .item-icon { font-size: 45px; margin-bottom: 10px; }
@@ -192,12 +192,13 @@
         return '#aaa';
     }
 
-    // คำนวณหาคนที่กำลังถือไอเท็มอยู่ตอนนี้ (เบิก - คืน)
+    // คำนวณหาคนที่กำลังถือไอเท็มอยู่ตอนนี้
     function getActiveHolders(itemName) {
         let balances = {};
         dataDeposit.forEach(row => {
             if (row['ชื่อไอเท็ม'] === itemName) {
-                let name = row['อยู่ที่ใคร'];
+                // อัปเดต: รองรับทั้งคำว่า "อยู่ที่" และ "อยู่ที่ใคร"
+                let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
                 let status = row['สถานะ'] || '';
                 let qty = parseInt(row['จำนวน']) || 0;
                 
@@ -205,7 +206,6 @@
                 
                 if (status.includes('เบิก') || status.includes('ยืม')) balances[name] += qty;
                 if (status.includes('คืน')) balances[name] -= qty;
-                // ถ้า "ขาย" จะไม่นับว่าคนนั้นถือของอยู่ (ถือว่าของออกจากกิลด์ไปเลย)
             }
         });
         
@@ -263,17 +263,15 @@
             let total = row['จำนวนทั้งหมด'] || '0';
             let remain = row['คงเหลือ'] || '0';
             
-            // จัดการสีป้าย
             let badgeClass = 'card-badge';
             let soldOutClass = '';
             if (total === '0' || total === 0) {
-                badgeClass = 'card-badge gray'; // ขายเกลี้ยง ไม่มีของแล้ว
+                badgeClass = 'card-badge gray'; 
                 soldOutClass = 'sold-out';
             } else if (remain === '0' || remain === 0) {
-                badgeClass = 'card-badge red'; // ของมีแต่ถูกยืมไปหมด
+                badgeClass = 'card-badge red'; 
             }
 
-            // คำนวณคนกำลังใช้
             let activeHolders = getActiveHolders(row['ชื่อไอเท็ม']);
             let holdersHtml = '';
             if (activeHolders.length > 0) {
@@ -304,13 +302,16 @@
         const reversedData = [...dataDeposit].reverse();
         reversedData.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
+            
+            // อัปเดต: รองรับทั้งคำว่า "อยู่ที่" และ "อยู่ที่ใคร"
+            let holderName = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
             let sColor = getStatusColor(row['สถานะ']);
             let actionText = row['สถานะ']?.includes('ขาย') ? '💰 นำไปขายโดย' : '➔';
             
             container.innerHTML += `
                 <div class="log-item">
                     <div>
-                        <div class="log-detail">${row['ชื่อไอเท็ม']} x${row['จำนวน']} ${actionText} ${row['อยู่ที่ใคร']}</div>
+                        <div class="log-detail">${row['ชื่อไอเท็ม']} x${row['จำนวน']} ${actionText} ${holderName}</div>
                         <div class="log-date">${row['วันที่']}</div>
                     </div>
                     <div class="card-badge" style="background: ${sColor}20; color: ${sColor};">${row['สถานะ']}</div>
@@ -323,7 +324,6 @@
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
         
-        // อัปเดตป้ายใน Modal
         let modalBadge = document.getElementById('modalBadge');
         modalBadge.innerText = `สถานะ: ${remain} / ${total} ชิ้น`;
         modalBadge.className = 'card-badge ' + (total == 0 ? 'gray' : (remain == 0 ? 'red' : ''));
@@ -331,20 +331,22 @@
         const holderList = document.getElementById('modalHolderList');
         holderList.innerHTML = '';
 
-        // ค้นหาประวัติย้อนหลังทั้งหมด
         let foundLogs = dataDeposit.filter(row => row['ชื่อไอเท็ม'] === itemName);
-        let reversedLogs = [...foundLogs].reverse(); // เอาล่าสุดขึ้นก่อน
+        let reversedLogs = [...foundLogs].reverse(); 
         
         if (reversedLogs.length === 0) {
             holderList.innerHTML = '<div style="text-align:center; color:#ccc; padding:20px;">ไม่มีประวัติการทำรายการ 🍃</div>';
         } else {
             reversedLogs.forEach(record => {
                 let sColor = getStatusColor(record['สถานะ']);
+                // อัปเดต: รองรับทั้งคำว่า "อยู่ที่" และ "อยู่ที่ใคร"
+                let holderName = record['อยู่ที่'] || record['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
+
                 holderList.innerHTML += `
                     <div class="holder-item">
                         <div>
                             <span style="font-size:11px; color:#aaa; display:block;">${record['วันที่']}</span>
-                            <span>👤 ${record['อยู่ที่ใคร']}</span>
+                            <span>👤 ${holderName}</span>
                         </div>
                         <span class="card-badge" style="background:${sColor}20; color:${sColor}; font-size:11px;">
                             ${record['สถานะ']} (${record['จำนวน']})
