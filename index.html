@@ -65,11 +65,11 @@
         /* --- ส่วนของ Grid --- */
         .grid-layout { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); /* ขนาดคลังไอเท็ม */
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); 
             gap: 20px; 
         }
         #membersGrid {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* ขนาดสมาชิกจะเล็กกว่า จุได้เยอะกว่า */
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
             gap: 15px;
         }
 
@@ -100,7 +100,7 @@
         .card-badge.red { background: #fff0f0; color: #ff8b94; }
         .card-badge.gray { background: #f0f0f0; color: #999; }
         
-        /* สไตล์สำหรับอาชีพรอง (เล็กๆ จางๆ ไม่มีคำว่า รอง:) */
+        /* สไตล์สำหรับอาชีพรอง */
         .sub-class-text {
             font-size: 11px; color: #b0b0b0; margin-top: 4px; font-weight: 400;
         }
@@ -215,7 +215,6 @@
     let dataItems = [];
     let dataDeposit = [];
     
-    // ตัวแปรเก็บสถานะการกรองสมาชิก (ค่าเริ่มต้นคือ All)
     let currentMemberFilter = 'All';
 
     function switchTab(pageId) {
@@ -225,18 +224,13 @@
         event.currentTarget.classList.add('active');
     }
 
-    // ฟังก์ชันจัดการปุ่มกรองสมาชิก
     function filterMembers(role, event) {
         currentMemberFilter = role;
-        // ล้างปุ่ม active เดิมออก
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        // ไฮไลต์ปุ่มที่ถูกกด
         if(event) event.currentTarget.classList.add('active');
-        // วาดหน้าสมาชิกใหม่ตามตัวกรอง
         renderMembers();
     }
 
-    // ฟังก์ชันโหลดข้อมูล
     function fetchData() {
         let noCache = '&t=' + new Date().getTime(); 
         Papa.parse(URL_MEMBERS + noCache, { download: true, header: true, complete: res => { dataMembers = res.data; checkAndRenderAll(); }});
@@ -305,12 +299,11 @@
         return holdingItems;
     }
 
-    // --- วาดหน้าสมาชิก (อัปเดตระบบ Filter & ความสูงการ์ด) ---
+    // --- วาดหน้าสมาชิก ---
     function renderMembers() {
         const grid = document.getElementById('membersGrid');
         grid.innerHTML = '';
         
-        // คัดกรองรายชื่อตามปุ่มที่กด
         let filteredData = dataMembers;
         if (currentMemberFilter !== 'All') {
             filteredData = dataMembers.filter(row => row['ตำแหน่ง(หลัก)'] === currentMemberFilter);
@@ -321,22 +314,23 @@
             if(!memberName) return;
 
             let roleIcon = row['ตำแหน่ง(หลัก)'] === 'Support' ? '💖' : row['ตำแหน่ง(หลัก)'] === 'Tank' ? '🛡️' : '⚔️';
-            
-            // ดึงอาชีพหลัก และ อาชีพรอง
             let mainClass = row['อาชีพ / คลาส'] || '';
             let subClass = row['อาชีพรอง'] || ''; 
             
             let classHtml = '';
             if(mainClass) classHtml += `<div class="card-badge">${mainClass}</div>`;
-            // เอาระบุคำว่า "รอง:" ออก เหลือแค่ชื่ออาชีพ
             if(subClass) classHtml += `<div class="sub-class-text">${subClass}</div>`;
 
             let holdingItems = getBorrowedItemsByMember(memberName);
+            
+            // 🛑 เข้ารหัสข้อมูลก่อนส่งเข้า HTML เพื่อป้องกันโค้ดพังจากตัวอักษรพิเศษ
+            let safeName = encodeURIComponent(memberName);
+            let safeMainClass = encodeURIComponent(mainClass);
+            let safeSubClass = encodeURIComponent(subClass);
             let safeHoldingData = encodeURIComponent(JSON.stringify(holdingItems));
 
-            // เปลี่ยนจาก .card ธรรมดา เป็นเพิ่ม .member-card ให้เล็กลง
             grid.innerHTML += `
-                <div class="card member-card" onclick="openMemberModal('${memberName}', '${roleIcon}', '${mainClass}', '${subClass}', '${safeHoldingData}')">
+                <div class="card member-card" onclick="openMemberModal('${safeName}', '${roleIcon}', '${safeMainClass}', '${safeSubClass}', '${safeHoldingData}')">
                     <div>
                         <div class="item-icon">${roleIcon}</div>
                         <div class="card-title">${memberName}</div>
@@ -346,7 +340,6 @@
             `;
         });
 
-        // หากกรองแล้วไม่พบสมาชิกเลย
         if (filteredData.length === 0) {
             grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #ccc; margin-top: 20px;">ไม่มีสมาชิกในตำแหน่งนี้ 🍃</div>`;
         }
@@ -364,8 +357,12 @@
         if (goldItem) {
             let qty = goldItem['คงเหลือ'] || '0';
             let displayQty = !isNaN(qty.toString().replace(/,/g, '')) ? Number(qty.toString().replace(/,/g, '')).toLocaleString() : qty;
+            
+            // 🛑 เข้ารหัสชื่อไอเท็ม
+            let safeGoldName = encodeURIComponent(goldItem['ชื่อไอเท็ม']);
+
             goldContainer.innerHTML = `
-                <div class="gold-banner" onclick="openItemModal('${goldItem['ชื่อไอเท็ม']}', '🪙', '${qty}', '${goldItem['จำนวนทั้งหมด']}')">
+                <div class="gold-banner" onclick="openItemModal('${safeGoldName}', '🪙', '${qty}', '${goldItem['จำนวนทั้งหมด']}')">
                     <div class="gold-title"><span style="font-size: 28px;">🪙</span> Gold กองกลาง</div>
                     <div class="gold-amount">${displayQty} G</div>
                 </div>
@@ -399,8 +396,11 @@
                 `;
             }
 
+            // 🛑 เข้ารหัสชื่อไอเท็มป้องกัน Error
+            let safeItemName = encodeURIComponent(row['ชื่อไอเท็ม']);
+
             grid.innerHTML += `
-                <div class="card ${soldOutClass}" onclick="openItemModal('${row['ชื่อไอเท็ม']}', '${icon}', '${remain}', '${total}')">
+                <div class="card ${soldOutClass}" onclick="openItemModal('${safeItemName}', '${icon}', '${remain}', '${total}')">
                     <div>
                         <div class="item-icon">${icon}</div>
                         <div class="card-title">${row['ชื่อไอเท็ม']}</div>
@@ -437,7 +437,10 @@
     }
 
     // --- เปิด Modal ไอเท็ม ---
-    function openItemModal(itemName, icon, remain, total) {
+    function openItemModal(safeItemName, icon, remain, total) {
+        // ถอดรหัสชื่อที่ส่งมา
+        let itemName = decodeURIComponent(safeItemName);
+
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
         
@@ -475,11 +478,15 @@
     }
 
     // --- เปิด Modal สมาชิก ---
-    function openMemberModal(name, icon, mainClass, subClass, encodedHoldingData) {
+    function openMemberModal(safeName, icon, safeMainClass, safeSubClass, encodedHoldingData) {
+        // ถอดรหัสชื่อและคลาสก่อนนำไปแสดงผล
+        let name = decodeURIComponent(safeName);
+        let mainClass = decodeURIComponent(safeMainClass);
+        let subClass = decodeURIComponent(safeSubClass);
+
         document.getElementById('memberModalName').innerText = name;
         document.getElementById('memberModalIcon').innerText = icon;
 
-        // อัปเดตลบคำว่า "รอง:" ใน Modal ด้วย
         let rolesHtml = '';
         if(mainClass) rolesHtml += `<div><span class="card-badge" style="font-size:14px;">${mainClass}</span></div>`;
         if(subClass) rolesHtml += `<div><span style="font-size:12px; color:#aaa;">(${subClass})</span></div>`;
@@ -506,7 +513,6 @@
         document.getElementById('memberModal').style.display = 'flex';
     }
 
-    // ปิด Modal
     function closeModal(e, modalId) {
         if(e.target.id === modalId) {
             document.getElementById(modalId).style.display = 'none';
