@@ -58,7 +58,6 @@
         .gold-banner:hover { transform: translateY(-3px); }
         .gold-title { font-size: 18px; font-weight: 600; color: #d4af37; display: flex; align-items: center; gap: 10px; }
         
-        /* แก้ไขส่วนจัดวางตัวเลข Gold */
         .gold-amount { display: flex; flex-direction: column; align-items: flex-end; }
         .gold-amount-main { font-size: 26px; font-weight: 600; color: #4a4a4a; line-height: 1; }
         .gold-amount-sub { font-size: 13px; color: #a0a0a0; font-weight: 400; margin-top: 6px; }
@@ -127,7 +126,7 @@
             margin-bottom: 12px; display: flex; justify-content: space-between; 
             align-items: center; box-shadow: 0 3px 10px rgba(0,0,0,0.03); 
         }
-        .log-date { font-size: 12px; color: #aaa; margin-top: 4px; display: flex; align-items: center; gap: 8px;}
+        .log-date { font-size: 12px; color: #aaa; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
         .log-detail { font-weight: 600; font-size: 14px;}
         
         /* --- Popup (Modal) --- */
@@ -157,14 +156,12 @@
 <div class="container">
     <h1>☁️ Guild Storage</h1>
 
-    <!-- เมนู Tabs -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('page-items')">📦 คลังกิลด์</button>
         <button class="tab-btn" onclick="switchTab('page-members')">👥 สมาชิก</button>
         <button class="tab-btn" onclick="switchTab('page-logs')">📝 ประวัติ</button>
     </div>
 
-    <!-- 1. หน้าคลังไอเท็ม -->
     <div id="page-items" class="page active">
         <div class="filter-bar">
             <button class="filter-btn active" onclick="filterItems('All', event)">ทั้งหมด</button>
@@ -179,12 +176,10 @@
         <div class="item-list-container" id="itemsGrid"></div>
     </div>
 
-    <!-- 2. หน้าสมาชิก -->
     <div id="page-members" class="page">
         <div id="membersContainer"></div>
     </div>
 
-    <!-- 3. หน้าประวัติ -->
     <div id="page-logs" class="page">
         <div id="logsContainer"></div>
     </div>
@@ -273,9 +268,9 @@
                 
                 if (!balances[name]) balances[name] = 0;
                 
+                // ถือว่า เบิก, เบิกออก, ยืม คือการดึงของออกไป
                 if (status.includes('เบิก') || status.includes('ยืม')) balances[name] += qty;
-                // ให้รองรับคำว่า "ฝาก" และ "คืน" เผื่อคุณใช้ทั้ง 2 คำตอนเอาเงินมาคืน
-                if (status.includes('คืน') || status.includes('ฝาก')) balances[name] -= qty;
+                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[name] -= qty;
             }
         });
         
@@ -292,20 +287,24 @@
         return active;
     }
 
+    // ปรับ Logic ให้ตรวจจับไอเท็มที่คนยืมให้แม่นขึ้น
     function getBorrowedItemsByMember(memberName) {
         let balances = {};
         dataDeposit.forEach(row => {
             let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || '';
-            if (name === memberName) {
+            // ลบช่องว่างเผื่อพิมพ์ผิดใน Sheet
+            if (name.trim() === memberName.trim()) {
                 let itemName = row['ชื่อไอเท็ม'];
+                if (!itemName) return;
+
                 let status = row['สถานะ'] || '';
                 let qty = parseInt(row['จำนวน']?.replace(/,/g, '')) || 0;
                 
                 if (!balances[itemName]) balances[itemName] = 0;
                 
                 if (status.includes('เบิก') || status.includes('ยืม')) balances[itemName] += qty;
-                // ให้รองรับคำว่า "ฝาก" และ "คืน" 
-                if (status.includes('คืน') || status.includes('ฝาก')) balances[itemName] -= qty;
+                // ถ้าเขาเอามาคืน ฝากกลับ หรือเอาของไปขายต่อ ของนั้นจะไม่จัดว่าอยู่กับตัวเขาแล้ว
+                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[itemName] -= qty;
             }
         });
 
@@ -316,7 +315,6 @@
         return holdingItems;
     }
 
-    // --- วาดหน้าสมาชิก ---
     function renderMembers() {
         const container = document.getElementById('membersContainer');
         container.innerHTML = '';
@@ -370,7 +368,6 @@
         });
     }
 
-    // --- วาดหน้าไอเท็ม ---
     function renderItems() {
         const grid = document.getElementById('itemsGrid');
         const goldContainer = document.getElementById('goldBannerContainer');
@@ -388,7 +385,6 @@
             });
         }
 
-        // ดีไซน์ป้าย Gold ใหม่ (แบบ 2 บรรทัด)
         if (goldItem && (currentItemFilter === 'All')) {
             let remain = goldItem['คงเหลือ'] || '0';
             let total = goldItem['จำนวนทั้งหมด'] || '0';
@@ -471,7 +467,6 @@
         });
     }
 
-    // --- วาดหน้าประวัติ ---
     function renderLogs() {
         const container = document.getElementById('logsContainer');
         container.innerHTML = '';
@@ -483,7 +478,7 @@
             let sColor = getStatusColor(row['สถานะ']);
             let status = row['สถานะ'] || '';
             
-            let goldIncome = row['รายรับ Gold'] || row['เงินที่ได้'] || row['ราคาขาย'] || ''; 
+            let goldIncome = row['รายรับ Gold'] || row['เงินที่ได้'] || row['รายรับ'] || row['ราคาขาย'] || ''; 
             let goldTextHtml = '';
 
             if (goldIncome && goldIncome !== '-' && goldIncome !== '0') {
@@ -516,19 +511,32 @@
         });
     }
 
+    // แก้ไขระบบกรอง Log ของ Gold (แสดงที่มาของเงินทั้งหมด)
     function openItemModal(safeItemName, icon, remain, total) {
         let itemName = decodeURIComponent(safeItemName);
+        let isGold = itemName.toLowerCase() === 'gold';
+
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
         
         let modalBadge = document.getElementById('modalBadge');
-        modalBadge.innerText = `สถานะ: ${remain} / ${total} ${itemName.toLowerCase() === 'gold' ? '' : 'ชิ้น'}`;
+        modalBadge.innerText = `สถานะ: ${remain} / ${total} ${isGold ? '' : 'ชิ้น'}`;
         modalBadge.className = 'card-badge ' + (total == 0 ? 'gray' : (remain == 0 ? 'red' : ''));
 
         const holderList = document.getElementById('modalHolderList');
         holderList.innerHTML = '';
 
-        let foundLogs = dataDeposit.filter(row => row['ชื่อไอเท็ม'] === itemName);
+        // ถ้าเปิดดู Gold ให้ดึง "ทุกรายการที่เกี่ยวกับเงิน" มาโชว์
+        let foundLogs = dataDeposit.filter(row => {
+            if (isGold) {
+                let goldIncome = row['รายรับ Gold'] || row['เงินที่ได้'] || row['รายรับ'] || row['ราคาขาย'] || '';
+                let hasGoldIncome = (goldIncome && goldIncome !== '-' && goldIncome !== '0' && goldIncome.trim() !== '');
+                return (row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].toLowerCase() === 'gold') || hasGoldIncome;
+            } else {
+                return row['ชื่อไอเท็ม'] === itemName;
+            }
+        });
+        
         let reversedLogs = [...foundLogs].reverse(); 
         
         if (reversedLogs.length === 0) {
@@ -537,19 +545,36 @@
             reversedLogs.forEach(record => {
                 let sColor = getStatusColor(record['สถานะ']);
                 let holderName = record['อยู่ที่'] || record['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
+                let recordItemName = record['ชื่อไอเท็ม'] || '';
                 
                 let rawQty = record['จำนวน'] ? record['จำนวน'].toString().replace(/,/g, '') : '0';
                 let formattedQty = !isNaN(rawQty) ? Number(rawQty).toLocaleString() : rawQty;
 
-                let goldIncome = record['รายรับ Gold'] || record['เงินที่ได้'] || record['ราคาขาย'] || ''; 
+                let goldIncome = record['รายรับ Gold'] || record['เงินที่ได้'] || record['รายรับ'] || record['ราคาขาย'] || ''; 
                 let goldTextHtml = '';
+                let amountText = formattedQty;
 
-                if (goldIncome && goldIncome !== '-' && goldIncome !== '0') {
-                    let numGold = Number(goldIncome.toString().replace(/,/g, ''));
-                    if (numGold > 0) {
-                        goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${numGold.toLocaleString()} G</span>`;
-                    } else if (numGold < 0) {
-                        goldTextHtml = `<br><span style="color:#ff8b94; font-weight:600; font-size:11px;">${numGold.toLocaleString()} G</span>`;
+                if (isGold) {
+                    if (recordItemName.toLowerCase() !== 'gold') {
+                        // ดึงประวัติว่าได้เงินมาจากไอเท็มชิ้นไหน (บอกที่มาของเงิน)
+                        let numGold = Number(goldIncome.toString().replace(/,/g, ''));
+                        if (numGold > 0) {
+                            goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${numGold.toLocaleString()} G (จาก ${recordItemName})</span>`;
+                        } else if (numGold < 0) {
+                            goldTextHtml = `<br><span style="color:#ff8b94; font-weight:600; font-size:11px;">${numGold.toLocaleString()} G (ซื้อ ${recordItemName})</span>`;
+                        }
+                        amountText = '-'; 
+                    } else {
+                        amountText = formattedQty + ' G';
+                    }
+                } else {
+                    if (goldIncome && goldIncome !== '-' && goldIncome !== '0') {
+                        let numGold = Number(goldIncome.toString().replace(/,/g, ''));
+                        if (numGold > 0) {
+                            goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${numGold.toLocaleString()} G</span>`;
+                        } else if (numGold < 0) {
+                            goldTextHtml = `<br><span style="color:#ff8b94; font-weight:600; font-size:11px;">${numGold.toLocaleString()} G</span>`;
+                        }
                     }
                 }
 
@@ -561,7 +586,7 @@
                             ${goldTextHtml}
                         </div>
                         <span class="card-badge" style="background:${sColor}20; color:${sColor}; font-size:11px;">
-                            ${record['สถานะ']} (${formattedQty})
+                            ${record['สถานะ']} ${amountText !== '-' ? `(${amountText})` : ''}
                         </span>
                     </div>
                 `;
