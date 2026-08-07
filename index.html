@@ -113,11 +113,10 @@
         .card-badge.gray { background: #f0f0f0; color: #999; }
 
         .active-users-box { 
-            margin-top: 5px; padding: 4px 8px; font-size: 10px; 
+            margin-top: 5px; padding: 4px 8px; font-size: 11px; 
             border-radius: 8px; display: inline-block; text-align: right;
             background: #fdf5f6; border: 1px dashed #ffc6c9; color: #666;
         }
-        .active-users-title { color: #ff8b94; font-weight: 600; font-size: 10px;}
 
         /* --- หน้า Log --- */
         .log-item { 
@@ -254,7 +253,7 @@
         return '#aaa';
     }
 
-    // 💡 ฟังก์ชันนี้ถูกแก้ให้กลับมาถูกต้องแล้ว: เพิ่มของในตัวแค่ตอน ยืม/เบิก และลบตอน คืน เท่านั้น
+    // 💡 อัปเดตใหม่: ใช้ Math.abs() ป้องกันการหักลบค่าติดลบจนกลายเป็นบวก
     function getActiveHolders(itemName) {
         let balances = {};
         let targetItem = (itemName || '').trim().toLowerCase();
@@ -265,7 +264,8 @@
             if (currentItem === targetItem) {
                 let rawName = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ').trim();
                 let status = (row['สถานะ'] || '').trim();
-                let qty = parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0;
+                // แปลงค่าให้เป็นบวกเสมอ ไม่ว่าใน Sheet จะใส่ลบหรือบวกมา
+                let qty = Math.abs(parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0);
                 
                 if (!balances[rawName]) balances[rawName] = 0;
                 
@@ -287,7 +287,6 @@
         return active;
     }
 
-    // 💡 ฟังก์ชันนี้ถูกแก้ให้กลับมาถูกต้องแล้ว: เพิ่มของในตัวแค่ตอน ยืม/เบิก และลบตอน คืน เท่านั้น
     function getBorrowedItemsByMember(memberName) {
         let balances = {};
         let targetMember = (memberName || '').trim().toLowerCase();
@@ -300,7 +299,8 @@
                 if (!originalItemName) return;
 
                 let status = (row['สถานะ'] || '').trim();
-                let qty = parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0;
+                // แปลงค่าให้เป็นบวกเสมอ ป้องกันบั๊กค่าติดลบ
+                let qty = Math.abs(parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0);
                 
                 if (!balances[originalItemName]) balances[originalItemName] = 0;
                 
@@ -439,9 +439,9 @@
             let activeHolders = getActiveHolders(row['ชื่อไอเท็ม']);
             let holdersHtml = '';
             if (activeHolders.length > 0) {
+                // 💡 นำคำว่า "ถูกยืมโดย:" ออกตามรีเควสต์
                 holdersHtml = `
                     <div class="active-users-box">
-                        <span class="active-users-title">ถูกยืมโดย:</span>
                         ${activeHolders.join(', ')}
                     </div>
                 `;
