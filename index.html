@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guild Storage ☁️</title>
-    <!-- นำเข้าฟอนต์ Prompt เพื่อความน่ารักและอ่านง่าย -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
     <style>
-        /* --- ธีมหลัก (น่ารัก ขาว มน) --- */
         body { 
             font-family: 'Prompt', sans-serif; 
             background-color: #f9fbfc; 
@@ -20,7 +18,6 @@
         .container { max-width: 900px; margin: 0 auto; }
         h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 30px; }
 
-        /* --- เมนู (Tabs) --- */
         .tabs { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
         .tab-btn { 
             background: white; border: none; padding: 12px 25px; border-radius: 30px; 
@@ -31,19 +28,31 @@
         .tab-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.05); }
         .tab-btn.active { background: #ffe4e1; color: #ff8b94; }
 
-        /* --- หน้าต่างๆ --- */
         .page { display: none; animation: fadeIn 0.4s; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ส่วนของ Grid (สมาชิก & คลังไอเท็ม) --- */
+        /* --- แถบ Gold ด้านบนสุด --- */
+        .gold-banner {
+            background: linear-gradient(135deg, #fffdf2 0%, #ffffff 100%);
+            border: 2px solid #ffebba;
+            border-radius: 20px;
+            padding: 20px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.1);
+        }
+        .gold-title { font-size: 18px; font-weight: 600; color: #d4af37; display: flex; align-items: center; gap: 10px; }
+        .gold-amount { font-size: 24px; font-weight: 600; color: #4a4a4a; }
+
         .grid-layout { 
             display: grid; 
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
             gap: 20px; 
         }
 
-        /* การ์ดไอเท็ม & สมาชิก */
         .card { 
             background: white; border-radius: 20px; padding: 20px; 
             text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.04); 
@@ -51,7 +60,6 @@
         }
         .card:hover { transform: translateY(-5px); border-color: #ffe4e1; box-shadow: 0 8px 25px rgba(255,139,148,0.15); }
         
-        /* ตกแต่งข้อมูลในการ์ด */
         .item-icon { font-size: 45px; margin-bottom: 10px; }
         .card-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; line-height: 1.3; }
         .card-badge { 
@@ -60,7 +68,6 @@
         }
         .card-badge.red { background: #fff0f0; color: #ff8b94; }
 
-        /* --- หน้า Log --- */
         .log-item { 
             background: white; border-radius: 16px; padding: 15px 20px; 
             margin-bottom: 15px; display: flex; justify-content: space-between; 
@@ -69,7 +76,6 @@
         .log-date { font-size: 12px; color: #aaa; }
         .log-detail { font-weight: 600; }
         
-        /* --- Popup (Modal) เวลากดดูไอเท็ม --- */
         .modal-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); 
@@ -96,54 +102,48 @@
 <div class="container">
     <h1>☁️ Guild Storage</h1>
 
-    <!-- เมนู Tabs -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('page-members')">👥 สมาชิก</button>
         <button class="tab-btn" onclick="switchTab('page-items')">📦 คลังกิลด์</button>
         <button class="tab-btn" onclick="switchTab('page-logs')">📝 ประวัติ</button>
     </div>
 
-    <!-- 1. หน้าสมาชิก -->
     <div id="page-members" class="page active">
         <div class="grid-layout" id="membersGrid"></div>
     </div>
 
-    <!-- 2. หน้าคลังไอเท็ม -->
     <div id="page-items" class="page">
+        <!-- พื้นที่สำหรับโชว์ Gold โดยเฉพาะ -->
+        <div id="goldBannerContainer"></div>
+        <!-- พื้นที่สำหรับโชว์ไอเท็มอื่นๆ -->
         <div class="grid-layout" id="itemsGrid"></div>
     </div>
 
-    <!-- 3. หน้าประวัติ -->
     <div id="page-logs" class="page">
         <div id="logsContainer"></div>
     </div>
 </div>
 
-<!-- Popup แสดงรายชื่อคนถือไอเท็ม -->
 <div class="modal-overlay" id="itemModal" onclick="closeModal(event)">
     <div class="modal-box">
         <button class="close-btn" onclick="document.getElementById('itemModal').style.display='none'">×</button>
         <div class="item-icon" id="modalIcon">🎁</div>
         <h2 id="modalItemName" style="margin-top: 0; color: #7cb9e8;">ชื่อไอเท็ม</h2>
         <p style="color: #888; font-size: 14px; margin-bottom: 5px;">รายชื่อคนที่ถือไอเท็มชิ้นนี้:</p>
-        <div class="holder-list" id="modalHolderList">
-            <!-- รายชื่อจะมาแทรกตรงนี้ -->
-        </div>
+        <div class="holder-list" id="modalHolderList"></div>
     </div>
 </div>
 
 <script>
-    // 🔴 1. นำลิงก์ CSV มาวางตรงนี้ให้ครบทั้ง 3 อันนะครับ 🔴
+    // 🔴 นำลิงก์ CSV มาวางตรงนี้ให้ครบทั้ง 3 อันครับ 🔴
     const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
     const URL_ITEMS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=528287579&single=true&output=csv';
     const URL_DEPOSIT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=111778732&single=true&output=csv';
 
-    // ตัวแปรเก็บข้อมูล
     let dataMembers = [];
     let dataItems = [];
     let dataDeposit = [];
 
-    // ฟังก์ชันเปลี่ยนหน้า
     function switchTab(pageId) {
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -151,22 +151,18 @@
         event.currentTarget.classList.add('active');
     }
 
-    // ฟังก์ชันดึงข้อมูลทั้งหมด
     function fetchData() {
         Papa.parse(URL_MEMBERS, { download: true, header: true, complete: res => { dataMembers = res.data; renderMembers(); }});
         Papa.parse(URL_ITEMS, { download: true, header: true, complete: res => { dataItems = res.data; renderItems(); }});
         Papa.parse(URL_DEPOSIT, { download: true, header: true, complete: res => { dataDeposit = res.data; renderLogs(); }});
     }
 
-    // --- วาดหน้าสมาชิก ---
     function renderMembers() {
         const grid = document.getElementById('membersGrid');
         grid.innerHTML = '';
         dataMembers.forEach(row => {
             if(!row['ชื่อตัวละคร (IGN)']) return;
-            // ใส่ไอคอนอาชีพน่ารักๆ (สมมติขึ้นมา เปลี่ยนได้ตามใจชอบ)
             let roleIcon = row['ตำแหน่ง(หลัก)'] === 'Support' ? '💖' : row['ตำแหน่ง(หลัก)'] === 'Tank' ? '🛡️' : '⚔️';
-            
             grid.innerHTML += `
                 <div class="card">
                     <div class="item-icon">${roleIcon}</div>
@@ -177,13 +173,35 @@
         });
     }
 
-    // --- วาดหน้าคลังไอเท็ม ---
     function renderItems() {
         const grid = document.getElementById('itemsGrid');
+        const goldContainer = document.getElementById('goldBannerContainer');
         grid.innerHTML = '';
-        dataItems.forEach(row => {
+        goldContainer.innerHTML = '';
+
+        // 1. แยกค้นหา Gold ออกมาก่อน
+        let goldItem = dataItems.find(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() === 'gold');
+        
+        // 2. คัดกรองไอเท็มอื่นๆ ที่ไม่ใช่ Gold
+        let otherItems = dataItems.filter(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() !== 'gold');
+
+        // แสดงผลแถบ Gold ด้านบน
+        if (goldItem) {
+            let qty = goldItem['คงเหลือ'] || '0';
+            // ทำให้ตัวเลขมีลูกน้ำ (,) เพื่อความอ่านง่าย
+            let displayQty = !isNaN(qty.toString().replace(/,/g, '')) ? Number(qty.toString().replace(/,/g, '')).toLocaleString() : qty;
+            
+            goldContainer.innerHTML = `
+                <div class="gold-banner" onclick="openItemModal('${goldItem['ชื่อไอเท็ม']}', '🪙')">
+                    <div class="gold-title"><span style="font-size: 28px;">🪙</span> Gold กองกลาง</div>
+                    <div class="gold-amount">${displayQty} G</div>
+                </div>
+            `;
+        }
+
+        // แสดงผลไอเท็มที่เหลือในรูปแบบ Grid
+        otherItems.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
-            // ไอคอนสำหรับของแต่ละประเภท
             let icon = row['ประเภท']?.includes('Card') ? '🎴' : row['ประเภท']?.includes('Gem') ? '💎' : '📦';
             let qty = row['คงเหลือ'] || '0';
             let badgeClass = qty === '0' ? 'card-badge red' : 'card-badge';
@@ -198,11 +216,9 @@
         });
     }
 
-    // --- วาดหน้าประวัติ (Log) ---
     function renderLogs() {
         const container = document.getElementById('logsContainer');
         container.innerHTML = '';
-        // เอาประวัติล่าสุดขึ้นก่อน
         const reversedData = [...dataDeposit].reverse();
         reversedData.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
@@ -219,7 +235,6 @@
         });
     }
 
-    // --- ระบบคลิกไอเท็มแล้วโชว์คนถือ (Modal) ---
     function openItemModal(itemName, icon) {
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
@@ -227,13 +242,11 @@
         const holderList = document.getElementById('modalHolderList');
         holderList.innerHTML = '';
 
-        // ค้นหาใน Log ว่าใครมีรายการของชิ้นนี้บ้าง
         let foundHolders = dataDeposit.filter(row => row['ชื่อไอเท็ม'] === itemName && row['อยู่ที่ใคร']);
         
         if (foundHolders.length === 0) {
             holderList.innerHTML = '<div style="text-align:center; color:#ccc;">ไม่มีประวัติคนถือไอเท็มนี้ 🍃</div>';
         } else {
-            // โชว์ประวัติการเบิก/ฝากของชิ้นนี้ทั้งหมด
             foundHolders.forEach(record => {
                 holderList.innerHTML += `
                     <div class="holder-item">
@@ -246,14 +259,12 @@
         document.getElementById('itemModal').style.display = 'flex';
     }
 
-    // ปิด Modal เมื่อคลิกพื้นที่ว่าง
     function closeModal(e) {
         if(e.target.id === 'itemModal') {
             document.getElementById('itemModal').style.display = 'none';
         }
     }
 
-    // โหลดข้อมูลตอนเปิดเว็บ
     window.onload = fetchData;
 </script>
 
