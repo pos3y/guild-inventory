@@ -252,32 +252,38 @@
 
     function getStatusColor(status) {
         if (!status) return '#aaa';
-        if (status.includes('ฝาก') || status.includes('คืน')) return '#7cb9e8'; 
-        if (status.includes('เบิก') || status.includes('ยืม')) return '#ff8b94'; 
-        if (status.includes('ซื้อ') || status.includes('ขาย')) return '#f39c12'; 
+        let safeStatus = status.trim().toLowerCase();
+        if (safeStatus.includes('ฝาก') || safeStatus.includes('คืน')) return '#7cb9e8'; 
+        if (safeStatus.includes('เบิก') || safeStatus.includes('ยืม')) return '#ff8b94'; 
+        if (safeStatus.includes('ซื้อ') || safeStatus.includes('ขาย')) return '#f39c12'; 
         return '#aaa';
     }
 
+    // ฟังก์ชันคำนวณไอเท็ม (อัปเกรดให้กันปัญหา Spacebar และพิมพ์เล็กพิมพ์ใหญ่ 100%)
     function getActiveHolders(itemName) {
         let balances = {};
+        let targetItem = (itemName || '').trim().toLowerCase();
+
         dataDeposit.forEach(row => {
-            if (row['ชื่อไอเท็ม'] === itemName) {
-                let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
-                let status = row['สถานะ'] || '';
-                let qty = parseInt(row['จำนวน']?.replace(/,/g, '')) || 0;
+            let currentItem = (row['ชื่อไอเท็ม'] || '').trim().toLowerCase();
+            
+            if (currentItem === targetItem) {
+                // ดึงชื่อคนมา (ถ้าว่างให้ใส่ ไม่ระบุชื่อ)
+                let rawName = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ').trim();
+                let status = (row['สถานะ'] || '').trim();
+                let qty = parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0;
                 
-                if (!balances[name]) balances[name] = 0;
+                if (!balances[rawName]) balances[rawName] = 0;
                 
-                // ถือว่า เบิก, เบิกออก, ยืม คือการดึงของออกไป
-                if (status.includes('เบิก') || status.includes('ยืม')) balances[name] += qty;
-                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[name] -= qty;
+                if (status.includes('เบิก') || status.includes('ยืม')) balances[rawName] += qty;
+                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[rawName] -= qty;
             }
         });
         
         let active = [];
         for (let name in balances) {
             if (balances[name] > 0) {
-                if (itemName.toLowerCase() === 'gold') {
+                if (targetItem === 'gold') {
                     active.push(`👤 ${name} (${balances[name].toLocaleString()} G)`);
                 } else {
                     active.push(`👤 ${name} (${balances[name]} ชิ้น)`);
@@ -287,24 +293,26 @@
         return active;
     }
 
-    // ปรับ Logic ให้ตรวจจับไอเท็มที่คนยืมให้แม่นขึ้น
+    // ฟังก์ชันคำนวณของที่คนๆ นั้นถืออยู่ (กันปัญหา Spacebar 100%)
     function getBorrowedItemsByMember(memberName) {
         let balances = {};
-        dataDeposit.forEach(row => {
-            let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || '';
-            // ลบช่องว่างเผื่อพิมพ์ผิดใน Sheet
-            if (name.trim() === memberName.trim()) {
-                let itemName = row['ชื่อไอเท็ม'];
-                if (!itemName) return;
+        let targetMember = (memberName || '').trim().toLowerCase();
 
-                let status = row['สถานะ'] || '';
-                let qty = parseInt(row['จำนวน']?.replace(/,/g, '')) || 0;
+        dataDeposit.forEach(row => {
+            let name = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || '').trim().toLowerCase();
+            
+            if (name === targetMember) {
+                // เก็บชื่อไอเท็มแบบต้นฉบับไว้โชว์สวยๆ
+                let originalItemName = (row['ชื่อไอเท็ม'] || '').trim();
+                if (!originalItemName) return;
+
+                let status = (row['สถานะ'] || '').trim();
+                let qty = parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0;
                 
-                if (!balances[itemName]) balances[itemName] = 0;
+                if (!balances[originalItemName]) balances[originalItemName] = 0;
                 
-                if (status.includes('เบิก') || status.includes('ยืม')) balances[itemName] += qty;
-                // ถ้าเขาเอามาคืน ฝากกลับ หรือเอาของไปขายต่อ ของนั้นจะไม่จัดว่าอยู่กับตัวเขาแล้ว
-                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[itemName] -= qty;
+                if (status.includes('เบิก') || status.includes('ยืม')) balances[originalItemName] += qty;
+                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[originalItemName] -= qty;
             }
         });
 
@@ -338,7 +346,7 @@
                 `;
                 
                 filteredMembers.forEach(row => {
-                    let memberName = row['ชื่อตัวละคร (IGN)'];
+                    let memberName = (row['ชื่อตัวละคร (IGN)'] || '').trim();
                     let mainClass = row['อาชีพ / คลาส'] || '';
                     let subClass = row['อาชีพรอง'] || ''; 
                     
@@ -474,9 +482,9 @@
         reversedData.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
             
-            let holderName = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
+            let holderName = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ').trim();
             let sColor = getStatusColor(row['สถานะ']);
-            let status = row['สถานะ'] || '';
+            let status = (row['สถานะ'] || '').trim();
             
             let goldIncome = row['รายรับ Gold'] || row['เงินที่ได้'] || row['รายรับ'] || row['ราคาขาย'] || ''; 
             let goldTextHtml = '';
@@ -511,10 +519,10 @@
         });
     }
 
-    // แก้ไขระบบกรอง Log ของ Gold (แสดงที่มาของเงินทั้งหมด)
     function openItemModal(safeItemName, icon, remain, total) {
-        let itemName = decodeURIComponent(safeItemName);
-        let isGold = itemName.toLowerCase() === 'gold';
+        let itemName = decodeURIComponent(safeItemName).trim();
+        let targetItemLower = itemName.toLowerCase();
+        let isGold = targetItemLower === 'gold';
 
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
@@ -526,14 +534,14 @@
         const holderList = document.getElementById('modalHolderList');
         holderList.innerHTML = '';
 
-        // ถ้าเปิดดู Gold ให้ดึง "ทุกรายการที่เกี่ยวกับเงิน" มาโชว์
         let foundLogs = dataDeposit.filter(row => {
+            let currentItemName = (row['ชื่อไอเท็ม'] || '').trim().toLowerCase();
             if (isGold) {
                 let goldIncome = row['รายรับ Gold'] || row['เงินที่ได้'] || row['รายรับ'] || row['ราคาขาย'] || '';
-                let hasGoldIncome = (goldIncome && goldIncome !== '-' && goldIncome !== '0' && goldIncome.trim() !== '');
-                return (row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].toLowerCase() === 'gold') || hasGoldIncome;
+                let hasGoldIncome = (goldIncome && goldIncome !== '-' && goldIncome !== '0' && goldIncome.toString().trim() !== '');
+                return currentItemName === 'gold' || hasGoldIncome;
             } else {
-                return row['ชื่อไอเท็ม'] === itemName;
+                return currentItemName === targetItemLower;
             }
         });
         
@@ -544,8 +552,8 @@
         } else {
             reversedLogs.forEach(record => {
                 let sColor = getStatusColor(record['สถานะ']);
-                let holderName = record['อยู่ที่'] || record['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
-                let recordItemName = record['ชื่อไอเท็ม'] || '';
+                let holderName = (record['อยู่ที่'] || record['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ').trim();
+                let recordItemName = (record['ชื่อไอเท็ม'] || '').trim();
                 
                 let rawQty = record['จำนวน'] ? record['จำนวน'].toString().replace(/,/g, '') : '0';
                 let formattedQty = !isNaN(rawQty) ? Number(rawQty).toLocaleString() : rawQty;
@@ -556,10 +564,9 @@
 
                 if (isGold) {
                     if (recordItemName.toLowerCase() !== 'gold') {
-                        // ดึงประวัติว่าได้เงินมาจากไอเท็มชิ้นไหน (บอกที่มาของเงิน)
                         let numGold = Number(goldIncome.toString().replace(/,/g, ''));
                         if (numGold > 0) {
-                            goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${numGold.toLocaleString()} G (จาก ${recordItemName})</span>`;
+                            goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${numGold.toLocaleString()} G (ขาย ${recordItemName})</span>`;
                         } else if (numGold < 0) {
                             goldTextHtml = `<br><span style="color:#ff8b94; font-weight:600; font-size:11px;">${numGold.toLocaleString()} G (ซื้อ ${recordItemName})</span>`;
                         }
