@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guild Storage ☁️</title>
+    <!-- นำเข้าฟอนต์ Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
     <style>
+        /* --- ธีมหลัก (น่ารัก ขาว มน) --- */
         body { 
             font-family: 'Prompt', sans-serif; 
             background-color: #f9fbfc; 
@@ -18,6 +20,7 @@
         .container { max-width: 900px; margin: 0 auto; }
         h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 30px; }
 
+        /* --- เมนู (Tabs) --- */
         .tabs { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
         .tab-btn { 
             background: white; border: none; padding: 12px 25px; border-radius: 30px; 
@@ -28,6 +31,7 @@
         .tab-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.05); }
         .tab-btn.active { background: #ffe4e1; color: #ff8b94; }
 
+        /* --- หน้าต่างๆ --- */
         .page { display: none; animation: fadeIn 0.4s; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -39,35 +43,51 @@
             border-radius: 20px;
             padding: 20px 30px;
             margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.1); cursor: pointer; transition: transform 0.2s ease;
         }
+        .gold-banner:hover { transform: translateY(-3px); }
         .gold-title { font-size: 18px; font-weight: 600; color: #d4af37; display: flex; align-items: center; gap: 10px; }
         .gold-amount { font-size: 24px; font-weight: 600; color: #4a4a4a; }
 
+        /* --- ส่วนของ Grid (สมาชิก & คลังไอเท็ม) --- */
         .grid-layout { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); 
             gap: 20px; 
         }
 
+        /* การ์ดไอเท็ม & สมาชิก */
         .card { 
             background: white; border-radius: 20px; padding: 20px; 
             text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.04); 
             cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
         .card:hover { transform: translateY(-5px); border-color: #ffe4e1; box-shadow: 0 8px 25px rgba(255,139,148,0.15); }
+        .card.sold-out { opacity: 0.6; filter: grayscale(50%); } /* ไอเท็มหมด/ขายหมดแล้วจะสีซีดลง */
         
+        /* ตกแต่งข้อมูลในการ์ด */
         .item-icon { font-size: 45px; margin-bottom: 10px; }
         .card-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; line-height: 1.3; }
+        
+        /* ป้ายจำนวน Remaining / Total */
         .card-badge { 
-            background: #f0f4f8; color: #7cb9e8; font-size: 12px; 
-            padding: 4px 12px; border-radius: 12px; font-weight: 600; display: inline-block;
+            background: #f0f4f8; color: #7cb9e8; font-size: 13px; 
+            padding: 5px 12px; border-radius: 12px; font-weight: 600; display: inline-block;
         }
         .card-badge.red { background: #fff0f0; color: #ff8b94; }
+        .card-badge.gray { background: #f0f0f0; color: #999; }
 
+        /* กรอบแสดงรายชื่อคนกำลังใช้ไอเท็มบนการ์ด */
+        .active-users-box {
+            margin-top: 12px; padding: 8px; border-radius: 12px;
+            background: #fdf5f6; border: 1px dashed #ffc6c9;
+            font-size: 11px; text-align: left; color: #666; line-height: 1.5;
+        }
+        .active-users-title { color: #ff8b94; font-weight: 600; margin-bottom: 3px; display: block; font-size: 10px;}
+
+        /* --- หน้า Log --- */
         .log-item { 
             background: white; border-radius: 16px; padding: 15px 20px; 
             margin-bottom: 15px; display: flex; justify-content: space-between; 
@@ -76,6 +96,7 @@
         .log-date { font-size: 12px; color: #aaa; }
         .log-detail { font-weight: 600; }
         
+        /* --- Popup (Modal) เวลากดดูไอเท็ม --- */
         .modal-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); 
@@ -84,16 +105,16 @@
         .modal-box { 
             background: white; width: 90%; max-width: 400px; border-radius: 24px; 
             padding: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); text-align: center; 
-            position: relative;
+            position: relative; max-height: 80vh; display: flex; flex-direction: column;
         }
         .close-btn { 
             position: absolute; top: 15px; right: 20px; font-size: 20px; 
             cursor: pointer; color: #aaa; font-weight: bold; border: none; background: none;
         }
-        .holder-list { margin-top: 20px; text-align: left; max-height: 200px; overflow-y: auto; }
+        .holder-list { margin-top: 20px; text-align: left; overflow-y: auto; padding-right: 5px;}
         .holder-item { 
             background: #f9fbfc; padding: 10px 15px; border-radius: 12px; 
-            margin-bottom: 8px; font-size: 14px; display: flex; justify-content: space-between;
+            margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center;
         }
     </style>
 </head>
@@ -102,40 +123,45 @@
 <div class="container">
     <h1>☁️ Guild Storage</h1>
 
+    <!-- เมนู Tabs -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('page-members')">👥 สมาชิก</button>
         <button class="tab-btn" onclick="switchTab('page-items')">📦 คลังกิลด์</button>
         <button class="tab-btn" onclick="switchTab('page-logs')">📝 ประวัติ</button>
     </div>
 
+    <!-- 1. หน้าสมาชิก -->
     <div id="page-members" class="page active">
         <div class="grid-layout" id="membersGrid"></div>
     </div>
 
+    <!-- 2. หน้าคลังไอเท็ม -->
     <div id="page-items" class="page">
-        <!-- พื้นที่สำหรับโชว์ Gold โดยเฉพาะ -->
         <div id="goldBannerContainer"></div>
-        <!-- พื้นที่สำหรับโชว์ไอเท็มอื่นๆ -->
         <div class="grid-layout" id="itemsGrid"></div>
     </div>
 
+    <!-- 3. หน้าประวัติ -->
     <div id="page-logs" class="page">
         <div id="logsContainer"></div>
     </div>
 </div>
 
+<!-- Popup แสดงประวัติไอเท็ม -->
 <div class="modal-overlay" id="itemModal" onclick="closeModal(event)">
     <div class="modal-box">
         <button class="close-btn" onclick="document.getElementById('itemModal').style.display='none'">×</button>
         <div class="item-icon" id="modalIcon">🎁</div>
-        <h2 id="modalItemName" style="margin-top: 0; color: #7cb9e8;">ชื่อไอเท็ม</h2>
-        <p style="color: #888; font-size: 14px; margin-bottom: 5px;">รายชื่อคนที่ถือไอเท็มชิ้นนี้:</p>
+        <h2 id="modalItemName" style="margin-top: 0; color: #7cb9e8; font-size: 18px;">ชื่อไอเท็ม</h2>
+        <div class="card-badge" id="modalBadge" style="margin: 0 auto 15px auto; display: table;">เหลือ: 0/0</div>
+        
+        <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">ประวัติการเบิก/ฝาก/ขาย:</p>
         <div class="holder-list" id="modalHolderList"></div>
     </div>
 </div>
 
 <script>
-    // 🔴 นำลิงก์ CSV มาวางตรงนี้ให้ครบทั้ง 3 อันครับ 🔴
+    // 🔴 ลิงก์ CSV 
     const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
     const URL_ITEMS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=528287579&single=true&output=csv';
     const URL_DEPOSIT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=111778732&single=true&output=csv';
@@ -153,8 +179,46 @@
 
     function fetchData() {
         Papa.parse(URL_MEMBERS, { download: true, header: true, complete: res => { dataMembers = res.data; renderMembers(); }});
-        Papa.parse(URL_ITEMS, { download: true, header: true, complete: res => { dataItems = res.data; renderItems(); }});
-        Papa.parse(URL_DEPOSIT, { download: true, header: true, complete: res => { dataDeposit = res.data; renderLogs(); }});
+        Papa.parse(URL_ITEMS, { download: true, header: true, complete: res => { dataItems = res.data; checkAndRenderItems(); }});
+        Papa.parse(URL_DEPOSIT, { download: true, header: true, complete: res => { dataDeposit = res.data; renderLogs(); checkAndRenderItems(); }});
+    }
+
+    // ฟังก์ชันช่วยเช็คสีของสถานะต่างๆ
+    function getStatusColor(status) {
+        if (!status) return '#aaa';
+        if (status.includes('ฝาก') || status.includes('คืน')) return '#7cb9e8'; // สีฟ้า (เข้าคลัง)
+        if (status.includes('เบิก') || status.includes('ยืม')) return '#ff8b94'; // สีชมพูแดง (ออกจากคลัง)
+        if (status.includes('ขาย')) return '#f39c12'; // สีทอง (ขายไปแล้ว)
+        return '#aaa';
+    }
+
+    // คำนวณหาคนที่กำลังถือไอเท็มอยู่ตอนนี้ (เบิก - คืน)
+    function getActiveHolders(itemName) {
+        let balances = {};
+        dataDeposit.forEach(row => {
+            if (row['ชื่อไอเท็ม'] === itemName) {
+                let name = row['อยู่ที่ใคร'];
+                let status = row['สถานะ'] || '';
+                let qty = parseInt(row['จำนวน']) || 0;
+                
+                if (!balances[name]) balances[name] = 0;
+                
+                if (status.includes('เบิก') || status.includes('ยืม')) balances[name] += qty;
+                if (status.includes('คืน')) balances[name] -= qty;
+                // ถ้า "ขาย" จะไม่นับว่าคนนั้นถือของอยู่ (ถือว่าของออกจากกิลด์ไปเลย)
+            }
+        });
+        
+        let active = [];
+        for (let name in balances) {
+            if (balances[name] > 0) active.push(`👤 ${name} (${balances[name]} ชิ้น)`);
+        }
+        return active;
+    }
+
+    // รอให้โหลดข้อมูลครบทั้ง Item และ Deposit ก่อนค่อยวาดหน้าคลัง
+    function checkAndRenderItems() {
+        if(dataItems.length > 0 && dataDeposit.length > 0) renderItems();
     }
 
     function renderMembers() {
@@ -176,41 +240,59 @@
     function renderItems() {
         const grid = document.getElementById('itemsGrid');
         const goldContainer = document.getElementById('goldBannerContainer');
-        grid.innerHTML = '';
-        goldContainer.innerHTML = '';
+        grid.innerHTML = ''; goldContainer.innerHTML = '';
 
-        // 1. แยกค้นหา Gold ออกมาก่อน
         let goldItem = dataItems.find(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() === 'gold');
-        
-        // 2. คัดกรองไอเท็มอื่นๆ ที่ไม่ใช่ Gold
         let otherItems = dataItems.filter(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() !== 'gold');
 
-        // แสดงผลแถบ Gold ด้านบน
         if (goldItem) {
             let qty = goldItem['คงเหลือ'] || '0';
-            // ทำให้ตัวเลขมีลูกน้ำ (,) เพื่อความอ่านง่าย
             let displayQty = !isNaN(qty.toString().replace(/,/g, '')) ? Number(qty.toString().replace(/,/g, '')).toLocaleString() : qty;
-            
             goldContainer.innerHTML = `
-                <div class="gold-banner" onclick="openItemModal('${goldItem['ชื่อไอเท็ม']}', '🪙')">
+                <div class="gold-banner" onclick="openItemModal('${goldItem['ชื่อไอเท็ม']}', '🪙', '${qty}', '${goldItem['จำนวนทั้งหมด']}')">
                     <div class="gold-title"><span style="font-size: 28px;">🪙</span> Gold กองกลาง</div>
                     <div class="gold-amount">${displayQty} G</div>
                 </div>
             `;
         }
 
-        // แสดงผลไอเท็มที่เหลือในรูปแบบ Grid
         otherItems.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
             let icon = row['ประเภท']?.includes('Card') ? '🎴' : row['ประเภท']?.includes('Gem') ? '💎' : '📦';
-            let qty = row['คงเหลือ'] || '0';
-            let badgeClass = qty === '0' ? 'card-badge red' : 'card-badge';
             
+            let total = row['จำนวนทั้งหมด'] || '0';
+            let remain = row['คงเหลือ'] || '0';
+            
+            // จัดการสีป้าย
+            let badgeClass = 'card-badge';
+            let soldOutClass = '';
+            if (total === '0' || total === 0) {
+                badgeClass = 'card-badge gray'; // ขายเกลี้ยง ไม่มีของแล้ว
+                soldOutClass = 'sold-out';
+            } else if (remain === '0' || remain === 0) {
+                badgeClass = 'card-badge red'; // ของมีแต่ถูกยืมไปหมด
+            }
+
+            // คำนวณคนกำลังใช้
+            let activeHolders = getActiveHolders(row['ชื่อไอเท็ม']);
+            let holdersHtml = '';
+            if (activeHolders.length > 0) {
+                holdersHtml = `
+                    <div class="active-users-box">
+                        <span class="active-users-title">● กำลังถูกใช้งานโดย:</span>
+                        ${activeHolders.join('<br>')}
+                    </div>
+                `;
+            }
+
             grid.innerHTML += `
-                <div class="card" onclick="openItemModal('${row['ชื่อไอเท็ม']}', '${icon}')">
-                    <div class="item-icon">${icon}</div>
-                    <div class="card-title">${row['ชื่อไอเท็ม']}</div>
-                    <div class="${badgeClass}">เหลือ: ${qty}</div>
+                <div class="card ${soldOutClass}" onclick="openItemModal('${row['ชื่อไอเท็ม']}', '${icon}', '${remain}', '${total}')">
+                    <div>
+                        <div class="item-icon">${icon}</div>
+                        <div class="card-title">${row['ชื่อไอเท็ม']}</div>
+                        <div class="${badgeClass}">เหลือ: ${remain} / ${total}</div>
+                    </div>
+                    ${holdersHtml}
                 </div>
             `;
         });
@@ -222,36 +304,51 @@
         const reversedData = [...dataDeposit].reverse();
         reversedData.forEach(row => {
             if(!row['ชื่อไอเท็ม']) return;
-            let statusColor = row['สถานะ'] === 'ฝากเข้า' ? '#ff8b94' : '#7cb9e8';
+            let sColor = getStatusColor(row['สถานะ']);
+            let actionText = row['สถานะ']?.includes('ขาย') ? '💰 นำไปขายโดย' : '➔';
+            
             container.innerHTML += `
                 <div class="log-item">
                     <div>
-                        <div class="log-detail">${row['ชื่อไอเท็ม']} x${row['จำนวน']} ➔ ${row['อยู่ที่ใคร']}</div>
+                        <div class="log-detail">${row['ชื่อไอเท็ม']} x${row['จำนวน']} ${actionText} ${row['อยู่ที่ใคร']}</div>
                         <div class="log-date">${row['วันที่']}</div>
                     </div>
-                    <div class="card-badge" style="background: ${statusColor}20; color: ${statusColor};">${row['สถานะ']}</div>
+                    <div class="card-badge" style="background: ${sColor}20; color: ${sColor};">${row['สถานะ']}</div>
                 </div>
             `;
         });
     }
 
-    function openItemModal(itemName, icon) {
+    function openItemModal(itemName, icon, remain, total) {
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
         
+        // อัปเดตป้ายใน Modal
+        let modalBadge = document.getElementById('modalBadge');
+        modalBadge.innerText = `สถานะ: ${remain} / ${total} ชิ้น`;
+        modalBadge.className = 'card-badge ' + (total == 0 ? 'gray' : (remain == 0 ? 'red' : ''));
+
         const holderList = document.getElementById('modalHolderList');
         holderList.innerHTML = '';
 
-        let foundHolders = dataDeposit.filter(row => row['ชื่อไอเท็ม'] === itemName && row['อยู่ที่ใคร']);
+        // ค้นหาประวัติย้อนหลังทั้งหมด
+        let foundLogs = dataDeposit.filter(row => row['ชื่อไอเท็ม'] === itemName);
+        let reversedLogs = [...foundLogs].reverse(); // เอาล่าสุดขึ้นก่อน
         
-        if (foundHolders.length === 0) {
-            holderList.innerHTML = '<div style="text-align:center; color:#ccc;">ไม่มีประวัติคนถือไอเท็มนี้ 🍃</div>';
+        if (reversedLogs.length === 0) {
+            holderList.innerHTML = '<div style="text-align:center; color:#ccc; padding:20px;">ไม่มีประวัติการทำรายการ 🍃</div>';
         } else {
-            foundHolders.forEach(record => {
+            reversedLogs.forEach(record => {
+                let sColor = getStatusColor(record['สถานะ']);
                 holderList.innerHTML += `
                     <div class="holder-item">
-                        <span>👤 ${record['อยู่ที่ใคร']}</span>
-                        <span style="color:#aaa; font-size:12px;">${record['สถานะ']} (${record['จำนวน']})</span>
+                        <div>
+                            <span style="font-size:11px; color:#aaa; display:block;">${record['วันที่']}</span>
+                            <span>👤 ${record['อยู่ที่ใคร']}</span>
+                        </div>
+                        <span class="card-badge" style="background:${sColor}20; color:${sColor}; font-size:11px;">
+                            ${record['สถานะ']} (${record['จำนวน']})
+                        </span>
                     </div>
                 `;
             });
