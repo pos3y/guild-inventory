@@ -253,7 +253,6 @@
         return '#aaa';
     }
 
-    // 💡 อัปเดตใหม่: ใช้ Math.abs() ป้องกันการหักลบค่าติดลบจนกลายเป็นบวก
     function getActiveHolders(itemName) {
         let balances = {};
         let targetItem = (itemName || '').trim().toLowerCase();
@@ -264,7 +263,6 @@
             if (currentItem === targetItem) {
                 let rawName = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ').trim();
                 let status = (row['สถานะ'] || '').trim();
-                // แปลงค่าให้เป็นบวกเสมอ ไม่ว่าใน Sheet จะใส่ลบหรือบวกมา
                 let qty = Math.abs(parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0);
                 
                 if (!balances[rawName]) balances[rawName] = 0;
@@ -299,7 +297,6 @@
                 if (!originalItemName) return;
 
                 let status = (row['สถานะ'] || '').trim();
-                // แปลงค่าให้เป็นบวกเสมอ ป้องกันบั๊กค่าติดลบ
                 let qty = Math.abs(parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0);
                 
                 if (!balances[originalItemName]) balances[originalItemName] = 0;
@@ -439,7 +436,6 @@
             let activeHolders = getActiveHolders(row['ชื่อไอเท็ม']);
             let holdersHtml = '';
             if (activeHolders.length > 0) {
-                // 💡 นำคำว่า "ถูกยืมโดย:" ออกตามรีเควสต์
                 holdersHtml = `
                     <div class="active-users-box">
                         ${activeHolders.join(', ')}
