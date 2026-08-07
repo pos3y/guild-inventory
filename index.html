@@ -36,7 +36,7 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ตัวกรอง (Filter Bar) --- */
+        /* --- ตัวกรอง (Filter Bar) สำหรับไอเท็ม --- */
         .filter-bar {
             display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
         }
@@ -59,9 +59,15 @@
         .gold-title { font-size: 18px; font-weight: 600; color: #d4af37; display: flex; align-items: center; gap: 10px; }
         .gold-amount { font-size: 24px; font-weight: 600; color: #4a4a4a; }
 
-        /* --- ส่วนของ Grid (หน้าสมาชิก) --- */
+        /* --- ส่วนของ Grid สมาชิก --- */
         .grid-layout { display: grid; gap: 15px; }
-        #membersGrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+        .members-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+        
+        .role-section-title {
+            color: #7cb9e8; font-size: 18px; font-weight: 600; 
+            margin: 30px 0 15px 0; padding-bottom: 5px; 
+            border-bottom: 2px dashed #e1eff9; display: flex; align-items: baseline; gap: 10px;
+        }
 
         /* การ์ดสมาชิก */
         .member-card { 
@@ -106,9 +112,7 @@
         .card-badge.gray { background: #f0f0f0; color: #999; }
         .sub-class-text { font-size: 11px; color: #aaa; font-weight: 400; }
 
-        .active-users-box {
-            background: #fdf5f6; border: 1px dashed #ffc6c9; color: #666;
-        }
+        .active-users-box { background: #fdf5f6; border: 1px dashed #ffc6c9; color: #666; }
         .active-users-title { color: #ff8b94; font-weight: 600; font-size: 10px;}
 
         /* --- หน้า Log --- */
@@ -156,7 +160,7 @@
 
     <!-- 1. หน้าคลังไอเท็ม -->
     <div id="page-items" class="page active">
-        <!-- แถบตัวกรองไอเท็ม (ตัดของใช้ออก) -->
+        <!-- แถบตัวกรองไอเท็ม -->
         <div class="filter-bar">
             <button class="filter-btn active" onclick="filterItems('All', event)">ทั้งหมด</button>
             <button class="filter-btn" onclick="filterItems('Boss Card', event)">🎴 การ์ดบอส</button>
@@ -170,16 +174,9 @@
         <div class="item-list-container" id="itemsGrid"></div>
     </div>
 
-    <!-- 2. หน้าสมาชิก -->
+    <!-- 2. หน้าสมาชิก (เปลี่ยนเป็น Container โล่งๆ เพื่อสร้างบล็อกข้างใน) -->
     <div id="page-members" class="page">
-        <!-- แถบตัวกรอง (Filter) -->
-        <div class="filter-bar">
-            <button class="filter-btn active" onclick="filterMembers('All', event)">ทั้งหมด</button>
-            <button class="filter-btn" onclick="filterMembers('DPS', event)">⚔️ DPS</button>
-            <button class="filter-btn" onclick="filterMembers('Tank', event)">🛡️ Tank</button>
-            <button class="filter-btn" onclick="filterMembers('Support', event)">💖 Support</button>
-        </div>
-        <div class="grid-layout" id="membersGrid"></div>
+        <div id="membersContainer"></div>
     </div>
 
     <!-- 3. หน้าประวัติ -->
@@ -224,7 +221,6 @@
     let dataItems = [];
     let dataDeposit = [];
     
-    let currentMemberFilter = 'All';
     let currentItemFilter = 'All';
 
     function switchTab(pageId) {
@@ -232,14 +228,6 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
         event.currentTarget.classList.add('active');
-    }
-
-    // กรองสมาชิก
-    function filterMembers(role, event) {
-        currentMemberFilter = role;
-        event.target.parentElement.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        renderMembers();
     }
 
     // กรองไอเท็ม
@@ -318,45 +306,69 @@
         return holdingItems;
     }
 
-    // --- วาดหน้าสมาชิก ---
+    // --- วาดหน้าสมาชิก (แบ่งเป็น 3 บล็อก DPS, Tank, Support) ---
     function renderMembers() {
-        const grid = document.getElementById('membersGrid');
-        grid.innerHTML = '';
+        const container = document.getElementById('membersContainer');
+        container.innerHTML = '';
         
-        let filteredData = dataMembers;
-        if (currentMemberFilter !== 'All') {
-            filteredData = dataMembers.filter(row => row['ตำแหน่ง(หลัก)'] === currentMemberFilter);
-        }
+        // กำหนดหมวดหมู่ที่ต้องการแยก
+        const roles = [
+            { id: 'DPS', icon: '⚔️', title: 'DPS' },
+            { id: 'Tank', icon: '🛡️', title: 'Tank' },
+            { id: 'Support', icon: '💖', title: 'Support' }
+        ];
 
-        filteredData.forEach(row => {
-            let memberName = row['ชื่อตัวละคร (IGN)'];
-            if(!memberName) return;
-
-            let roleIcon = row['ตำแหน่ง(หลัก)'] === 'Support' ? '💖' : row['ตำแหน่ง(หลัก)'] === 'Tank' ? '🛡️' : '⚔️';
-            let mainClass = row['อาชีพ / คลาส'] || '';
-            let subClass = row['อาชีพรอง'] || ''; 
+        roles.forEach(roleGroup => {
+            // คัดกรองคนตามตำแหน่ง
+            let filteredMembers = dataMembers.filter(row => row['ตำแหน่ง(หลัก)'] === roleGroup.id && row['ชื่อตัวละคร (IGN)']);
             
-            let classHtml = '';
-            if(mainClass) classHtml += `<div class="card-badge">${mainClass}</div>`;
-            if(subClass) classHtml += `<div class="sub-class-text">${subClass}</div>`;
+            // ถ้ามีคนในตำแหน่งนี้ ให้สร้างบล็อกขึ้นมา
+            if (filteredMembers.length > 0) {
+                // สร้างหัวข้อบล็อก พร้อมบอกจำนวนคน
+                let sectionHtml = `
+                    <h3 class="role-section-title">
+                        ${roleGroup.icon} ${roleGroup.title} 
+                        <span style="font-size:14px; color:#aaa;">(${filteredMembers.length} คน)</span>
+                    </h3>
+                    <div class="grid-layout members-grid">
+                `;
+                
+                // สร้างการ์ดคนในตำแหน่งนี้
+                filteredMembers.forEach(row => {
+                    let memberName = row['ชื่อตัวละคร (IGN)'];
+                    let mainClass = row['อาชีพ / คลาส'] || '';
+                    let subClass = row['อาชีพรอง'] || ''; 
+                    
+                    let classHtml = '';
+                    if(mainClass) classHtml += `<div class="card-badge">${mainClass}</div>`;
+                    if(subClass) classHtml += `<div class="sub-class-text">${subClass}</div>`;
 
-            let holdingItems = getBorrowedItemsByMember(memberName);
-            
-            let safeName = encodeURIComponent(memberName);
-            let safeMainClass = encodeURIComponent(mainClass);
-            let safeSubClass = encodeURIComponent(subClass);
-            let safeHoldingData = encodeURIComponent(JSON.stringify(holdingItems));
+                    let holdingItems = getBorrowedItemsByMember(memberName);
+                    
+                    let safeName = encodeURIComponent(memberName);
+                    let safeMainClass = encodeURIComponent(mainClass);
+                    let safeSubClass = encodeURIComponent(subClass);
+                    let safeHoldingData = encodeURIComponent(JSON.stringify(holdingItems));
 
-            grid.innerHTML += `
-                <div class="member-card" onclick="openMemberModal('${safeName}', '${roleIcon}', '${safeMainClass}', '${safeSubClass}', '${safeHoldingData}')">
-                    <div>
-                        <div class="item-icon">${roleIcon}</div>
-                        <div class="card-title">${memberName}</div>
-                        <div>${classHtml}</div>
-                    </div>
-                </div>
-            `;
+                    sectionHtml += `
+                        <div class="member-card" onclick="openMemberModal('${safeName}', '${roleGroup.icon}', '${safeMainClass}', '${safeSubClass}', '${safeHoldingData}')">
+                            <div>
+                                <div class="item-icon">${roleGroup.icon}</div>
+                                <div class="card-title">${memberName}</div>
+                                <div>${classHtml}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                sectionHtml += `</div>`; // ปิดกริด
+                container.innerHTML += sectionHtml; // นำบล็อกไปแปะในหน้าเว็บ
+            }
         });
+
+        if (dataMembers.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: #ccc; margin-top: 20px;">ไม่มีข้อมูลสมาชิก 🍃</div>`;
+        }
     }
 
     // --- วาดหน้าไอเท็มแบบ List ---
@@ -367,6 +379,9 @@
 
         let goldItem = dataItems.find(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() === 'gold');
         let otherItems = dataItems.filter(row => row['ชื่อไอเท็ม'] && row['ชื่อไอเท็ม'].trim().toLowerCase() !== 'gold');
+
+        // --- เพิ่มคำสั่งกลับด้าน Array (ของที่อยู่ล่างสุดใน Sheet จะขึ้นมาอยู่บนสุดของเว็บ) ---
+        otherItems.reverse();
 
         if (currentItemFilter !== 'All') {
             otherItems = otherItems.filter(row => {
