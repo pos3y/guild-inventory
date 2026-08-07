@@ -62,7 +62,7 @@
             background: white; border-radius: 20px; padding: 20px; 
             text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.04); 
             cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent;
-            display: flex; flex-direction: column; justify-content: space-between;
+            display: flex; flex-direction: column; justify-content: space-between; position: relative;
         }
         .card:hover { transform: translateY(-5px); border-color: #ffe4e1; box-shadow: 0 8px 25px rgba(255,139,148,0.15); }
         .card.sold-out { opacity: 0.6; filter: grayscale(50%); } 
@@ -71,15 +71,19 @@
         .item-icon { font-size: 45px; margin-bottom: 10px; }
         .card-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; line-height: 1.3; }
         
-        /* ป้ายจำนวน Remaining / Total */
+        /* ป้ายต่างๆ */
         .card-badge { 
-            background: #f0f4f8; color: #7cb9e8; font-size: 13px; 
-            padding: 5px 12px; border-radius: 12px; font-weight: 600; display: inline-block;
+            background: #f0f4f8; color: #7cb9e8; font-size: 12px; 
+            padding: 4px 10px; border-radius: 12px; font-weight: 600; display: inline-block; margin: 2px;
         }
         .card-badge.red { background: #fff0f0; color: #ff8b94; }
         .card-badge.gray { background: #f0f0f0; color: #999; }
+        
+        /* สไตล์สำหรับอาชีพรอง (เล็กๆ จางๆ) */
+        .sub-class-text {
+            font-size: 11px; color: #b0b0b0; margin-top: 6px; font-weight: 400;
+        }
 
-        /* กรอบแสดงรายชื่อคนกำลังใช้ไอเท็มบนการ์ด */
         .active-users-box {
             margin-top: 12px; padding: 8px; border-radius: 12px;
             background: #fdf5f6; border: 1px dashed #ffc6c9;
@@ -96,7 +100,7 @@
         .log-date { font-size: 12px; color: #aaa; }
         .log-detail { font-weight: 600; }
         
-        /* --- Popup (Modal) เวลากดดูไอเท็ม --- */
+        /* --- Popup (Modal) เวลากดดูไอเท็ม/สมาชิก --- */
         .modal-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); 
@@ -123,14 +127,14 @@
 <div class="container">
     <h1>☁️ Guild Storage</h1>
 
-    <!-- สลับตำแหน่งเมนู Tabs และให้คลังกิลด์เป็น active -->
+    <!-- เมนู Tabs -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('page-items')">📦 คลังกิลด์</button>
         <button class="tab-btn" onclick="switchTab('page-members')">👥 สมาชิก</button>
         <button class="tab-btn" onclick="switchTab('page-logs')">📝 ประวัติ</button>
     </div>
 
-    <!-- 1. หน้าคลังไอเท็ม (ย้ายมาเป็นหน้าแรกและใส่ class active) -->
+    <!-- 1. หน้าคลังไอเท็ม -->
     <div id="page-items" class="page active">
         <div id="goldBannerContainer"></div>
         <div class="grid-layout" id="itemsGrid"></div>
@@ -147,8 +151,8 @@
     </div>
 </div>
 
-<!-- Popup แสดงประวัติไอเท็ม -->
-<div class="modal-overlay" id="itemModal" onclick="closeModal(event)">
+<!-- Popup สำหรับ ไอเท็ม -->
+<div class="modal-overlay" id="itemModal" onclick="closeModal(event, 'itemModal')">
     <div class="modal-box">
         <button class="close-btn" onclick="document.getElementById('itemModal').style.display='none'">×</button>
         <div class="item-icon" id="modalIcon">🎁</div>
@@ -157,6 +161,19 @@
         
         <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">ประวัติการเบิก/ฝาก/ขาย:</p>
         <div class="holder-list" id="modalHolderList"></div>
+    </div>
+</div>
+
+<!-- Popup สำหรับ สมาชิก -->
+<div class="modal-overlay" id="memberModal" onclick="closeModal(event, 'memberModal')">
+    <div class="modal-box">
+        <button class="close-btn" onclick="document.getElementById('memberModal').style.display='none'">×</button>
+        <div class="item-icon" id="memberModalIcon">👤</div>
+        <h2 id="memberModalName" style="margin-top: 0; color: #7cb9e8; font-size: 18px;">ชื่อตัวละคร</h2>
+        <div id="memberModalRoles" style="margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 5px;"></div>
+        
+        <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">🎒 ไอเท็มที่กำลังถืออยู่ตอนนี้:</p>
+        <div class="holder-list" id="memberModalItems"></div>
     </div>
 </div>
 
@@ -177,27 +194,30 @@
         event.currentTarget.classList.add('active');
     }
 
-    // ฟังก์ชันดึงข้อมูลทั้งหมด (อัปเดต: เพิ่มระบบล้างแคช ป้องกันเบราว์เซอร์จำของเก่า)
+    // ฟังก์ชันโหลดข้อมูล
     function fetchData() {
-        // สร้างตัวเลขเวลาปัจจุบัน (มิลลิวินาที) จะเปลี่ยนไปเรื่อยๆ ทุกเสี้ยววินาที
         let noCache = '&t=' + new Date().getTime(); 
-
-        // เอาตัวเลขไปต่อท้ายลิงก์ เพื่อบังคับให้เบราว์เซอร์โหลดไฟล์ใหม่เสมอ
-        Papa.parse(URL_MEMBERS + noCache, { download: true, header: true, complete: res => { dataMembers = res.data; renderMembers(); }});
-        Papa.parse(URL_ITEMS + noCache, { download: true, header: true, complete: res => { dataItems = res.data; checkAndRenderItems(); }});
-        Papa.parse(URL_DEPOSIT + noCache, { download: true, header: true, complete: res => { dataDeposit = res.data; renderLogs(); checkAndRenderItems(); }});
+        Papa.parse(URL_MEMBERS + noCache, { download: true, header: true, complete: res => { dataMembers = res.data; checkAndRenderAll(); }});
+        Papa.parse(URL_ITEMS + noCache, { download: true, header: true, complete: res => { dataItems = res.data; checkAndRenderAll(); }});
+        Papa.parse(URL_DEPOSIT + noCache, { download: true, header: true, complete: res => { dataDeposit = res.data; checkAndRenderAll(); }});
     }
 
-    // ฟังก์ชันช่วยเช็คสีของสถานะต่างๆ
+    function checkAndRenderAll() {
+        if(dataMembers.length > 0 && dataItems.length > 0 && dataDeposit.length > 0) {
+            renderItems();
+            renderMembers();
+            renderLogs();
+        }
+    }
+
     function getStatusColor(status) {
         if (!status) return '#aaa';
-        if (status.includes('ฝาก') || status.includes('คืน')) return '#7cb9e8'; // สีฟ้า (เข้าคลัง)
-        if (status.includes('เบิก') || status.includes('ยืม')) return '#ff8b94'; // สีชมพูแดง (ออกจากคลัง)
-        if (status.includes('ขาย')) return '#f39c12'; // สีทอง (ขายไปแล้ว)
+        if (status.includes('ฝาก') || status.includes('คืน')) return '#7cb9e8'; 
+        if (status.includes('เบิก') || status.includes('ยืม')) return '#ff8b94'; 
+        if (status.includes('ขาย')) return '#f39c12'; 
         return '#aaa';
     }
 
-    // คำนวณหาคนที่กำลังถือไอเท็มอยู่ตอนนี้
     function getActiveHolders(itemName) {
         let balances = {};
         dataDeposit.forEach(row => {
@@ -220,27 +240,65 @@
         return active;
     }
 
-    // รอให้โหลดข้อมูลครบทั้ง Item และ Deposit ก่อนค่อยวาดหน้าคลัง
-    function checkAndRenderItems() {
-        if(dataItems.length > 0 && dataDeposit.length > 0) renderItems();
+    // ฟังก์ชันใหม่: หาสิ่งของที่สมาชิกคนนี้ถืออยู่
+    function getBorrowedItemsByMember(memberName) {
+        let balances = {};
+        dataDeposit.forEach(row => {
+            let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || '';
+            if (name === memberName) {
+                let itemName = row['ชื่อไอเท็ม'];
+                let status = row['สถานะ'] || '';
+                let qty = parseInt(row['จำนวน']) || 0;
+                
+                if (!balances[itemName]) balances[itemName] = 0;
+                
+                if (status.includes('เบิก') || status.includes('ยืม')) balances[itemName] += qty;
+                if (status.includes('คืน')) balances[itemName] -= qty;
+            }
+        });
+
+        let holdingItems = [];
+        for (let item in balances) {
+            if (balances[item] > 0) holdingItems.push({ name: item, qty: balances[item] });
+        }
+        return holdingItems;
     }
 
+    // --- วาดหน้าสมาชิก ---
     function renderMembers() {
         const grid = document.getElementById('membersGrid');
         grid.innerHTML = '';
         dataMembers.forEach(row => {
-            if(!row['ชื่อตัวละคร (IGN)']) return;
+            let memberName = row['ชื่อตัวละคร (IGN)'];
+            if(!memberName) return;
+
             let roleIcon = row['ตำแหน่ง(หลัก)'] === 'Support' ? '💖' : row['ตำแหน่ง(หลัก)'] === 'Tank' ? '🛡️' : '⚔️';
+            
+            // ดึงอาชีพหลัก และ อาชีพรอง
+            let mainClass = row['อาชีพ / คลาส'] || '';
+            let subClass = row['อาชีพรอง'] || ''; 
+            
+            let classHtml = '';
+            if(mainClass) classHtml += `<div class="card-badge">${mainClass}</div>`;
+            if(subClass) classHtml += `<div class="sub-class-text">รอง: ${subClass}</div>`;
+
+            // ดึงข้อมูลไอเท็มที่ถืออยู่เพื่อส่งไปให้ Modal ทำงานตอนคลิก
+            let holdingItems = getBorrowedItemsByMember(memberName);
+            let safeHoldingData = encodeURIComponent(JSON.stringify(holdingItems));
+
             grid.innerHTML += `
-                <div class="card">
-                    <div class="item-icon">${roleIcon}</div>
-                    <div class="card-title">${row['ชื่อตัวละคร (IGN)']}</div>
-                    <div class="card-badge">${row['อาชีพ / คลาส'] || '-'}</div>
+                <div class="card" onclick="openMemberModal('${memberName}', '${roleIcon}', '${mainClass}', '${subClass}', '${safeHoldingData}')">
+                    <div>
+                        <div class="item-icon">${roleIcon}</div>
+                        <div class="card-title">${memberName}</div>
+                        <div>${classHtml}</div>
+                    </div>
                 </div>
             `;
         });
     }
 
+    // --- วาดหน้าไอเท็ม ---
     function renderItems() {
         const grid = document.getElementById('itemsGrid');
         const goldContainer = document.getElementById('goldBannerContainer');
@@ -300,6 +358,7 @@
         });
     }
 
+    // --- วาดหน้าประวัติ ---
     function renderLogs() {
         const container = document.getElementById('logsContainer');
         container.innerHTML = '';
@@ -323,6 +382,7 @@
         });
     }
 
+    // --- เปิด Modal ไอเท็ม ---
     function openItemModal(itemName, icon, remain, total) {
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
@@ -360,9 +420,43 @@
         document.getElementById('itemModal').style.display = 'flex';
     }
 
-    function closeModal(e) {
-        if(e.target.id === 'itemModal') {
-            document.getElementById('itemModal').style.display = 'none';
+    // --- เปิด Modal สมาชิก ---
+    function openMemberModal(name, icon, mainClass, subClass, encodedHoldingData) {
+        document.getElementById('memberModalName').innerText = name;
+        document.getElementById('memberModalIcon').innerText = icon;
+
+        // ใส่ป้ายอาชีพ (ให้ตัวอาชีพรองเล็กลงและสีจางในหน้าต่าง Modal ด้วย)
+        let rolesHtml = '';
+        if(mainClass) rolesHtml += `<div><span class="card-badge" style="font-size:14px;">${mainClass}</span></div>`;
+        if(subClass) rolesHtml += `<div><span style="font-size:12px; color:#aaa;">(รอง: ${subClass})</span></div>`;
+        document.getElementById('memberModalRoles').innerHTML = rolesHtml;
+
+        // ลิสต์ไอเท็มที่กำลังถือ
+        const itemsList = document.getElementById('memberModalItems');
+        itemsList.innerHTML = '';
+        
+        let holdingItems = JSON.parse(decodeURIComponent(encodedHoldingData));
+        
+        if (holdingItems.length === 0) {
+            itemsList.innerHTML = '<div style="text-align:center; color:#ccc; padding:20px;">ไม่ได้ถือไอเท็มกิลด์ไว้ 🍃</div>';
+        } else {
+            holdingItems.forEach(item => {
+                itemsList.innerHTML += `
+                    <div class="holder-item">
+                        <span>🎁 ${item.name}</span>
+                        <span class="card-badge red" style="font-size:12px;">ถืออยู่: ${item.qty} ชิ้น</span>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('memberModal').style.display = 'flex';
+    }
+
+    // ปิด Modal
+    function closeModal(e, modalId) {
+        if(e.target.id === modalId) {
+            document.getElementById(modalId).style.display = 'none';
         }
     }
 
