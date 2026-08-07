@@ -280,7 +280,7 @@
             
             let classHtml = '';
             if(mainClass) classHtml += `<div class="card-badge">${mainClass}</div>`;
-            if(subClass) classHtml += `<div class="sub-class-text">รอง: ${subClass}</div>`;
+            if(subClass) classHtml += `<div class="sub-class-text">${subClass}</div>`;
 
             // ดึงข้อมูลไอเท็มที่ถืออยู่เพื่อส่งไปให้ Modal ทำงานตอนคลิก
             let holdingItems = getBorrowedItemsByMember(memberName);
