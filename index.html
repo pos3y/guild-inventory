@@ -57,7 +57,8 @@
         }
         .gold-banner:hover { transform: translateY(-3px); }
         .gold-title { font-size: 18px; font-weight: 600; color: #d4af37; display: flex; align-items: center; gap: 10px; }
-        .gold-amount { font-size: 24px; font-weight: 600; color: #4a4a4a; }
+        .gold-amount { font-size: 24px; font-weight: 600; color: #4a4a4a; display: flex; flex-direction: column; align-items: flex-end;}
+        .gold-remain-badge { background: #fffdf2; border: 1px solid #d4af37; color: #d4af37; font-size: 12px; padding: 2px 8px; border-radius: 10px; margin-top: 5px;}
 
         /* --- ส่วนของ Grid สมาชิก (แนวนอน) --- */
         .grid-layout { display: grid; gap: 15px; }
@@ -69,7 +70,7 @@
             border-bottom: 2px dashed #e1eff9; display: flex; align-items: baseline; gap: 10px;
         }
 
-        /* การ์ดสมาชิก (เปลี่ยนเป็นสี่เหลี่ยมผืนผ้าแนวนอน) */
+        /* การ์ดสมาชิก */
         .member-card { 
             background: white; border-radius: 16px; padding: 12px 15px; 
             display: flex; align-items: center; gap: 15px; text-align: left;
@@ -96,15 +97,12 @@
         .item-row-card:hover { transform: translateY(-2px); border-color: #7cb9e8; box-shadow: 0 5px 15px rgba(124,185,232,0.15); }
         .item-row-card.sold-out { opacity: 0.6; filter: grayscale(50%); }
 
-        /* ซ้าย: ไอคอน + ชื่อไอเท็ม */
         .item-row-left { display: flex; align-items: center; gap: 15px; }
         .item-icon-small { font-size: 30px; }
         .item-title-text { font-weight: 600; font-size: 15px; color: #4a4a4a; margin-bottom: 2px; }
         
-        /* ขวา: สถานะ + คนยืม */
         .item-row-right { text-align: right; }
         
-        /* ป้ายต่างๆ */
         .card-badge { 
             background: #f0f4f8; color: #7cb9e8; font-size: 12px; 
             padding: 4px 10px; border-radius: 12px; font-weight: 600; display: inline-block; margin: 2px;
@@ -127,7 +125,6 @@
         }
         .log-date { font-size: 12px; color: #aaa; margin-top: 4px; display: flex; align-items: center; gap: 8px;}
         .log-detail { font-weight: 600; font-size: 14px;}
-        .gold-earned-text { color: #d4af37; font-weight: 600; font-size: 13px; }
         
         /* --- Popup (Modal) --- */
         .modal-overlay { 
@@ -165,7 +162,6 @@
 
     <!-- 1. หน้าคลังไอเท็ม -->
     <div id="page-items" class="page active">
-        <!-- แถบตัวกรองไอเท็ม -->
         <div class="filter-bar">
             <button class="filter-btn active" onclick="filterItems('All', event)">ทั้งหมด</button>
             <button class="filter-btn" onclick="filterItems('Boss Card', event)">🎴 การ์ดบอส</button>
@@ -198,7 +194,7 @@
         <h2 id="modalItemName" style="margin-top: 0; color: #7cb9e8; font-size: 18px;">ชื่อไอเท็ม</h2>
         <div class="card-badge" id="modalBadge" style="margin: 0 auto 15px auto; display: table;">เหลือ: 0/0</div>
         
-        <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">ประวัติการเบิก/ฝาก/ขาย:</p>
+        <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">ประวัติการทำรายการ:</p>
         <div class="holder-list" id="modalHolderList"></div>
     </div>
 </div>
@@ -211,13 +207,12 @@
         <h2 id="memberModalName" style="margin-top: 0; color: #7cb9e8; font-size: 18px;">ชื่อตัวละคร</h2>
         <div id="memberModalRoles" style="margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 5px;"></div>
         
-        <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">🎒 ไอเท็มที่กำลังยืมอยู่ตอนนี้:</p>
+        <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">🎒 ไอเท็ม/เงิน ที่กำลังถืออยู่:</p>
         <div class="holder-list" id="memberModalItems"></div>
     </div>
 </div>
 
 <script>
-    // 🔴 ลิงก์ CSV 
     const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
     const URL_ITEMS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=528287579&single=true&output=csv';
     const URL_DEPOSIT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=111778732&single=true&output=csv';
@@ -225,7 +220,6 @@
     let dataMembers = [];
     let dataItems = [];
     let dataDeposit = [];
-    
     let currentItemFilter = 'All';
 
     function switchTab(pageId) {
@@ -261,17 +255,18 @@
         if (!status) return '#aaa';
         if (status.includes('ฝาก') || status.includes('คืน')) return '#7cb9e8'; 
         if (status.includes('เบิก') || status.includes('ยืม')) return '#ff8b94'; 
-        if (status.includes('ขาย')) return '#f39c12'; 
+        if (status.includes('ซื้อ') || status.includes('ขาย')) return '#f39c12'; 
         return '#aaa';
     }
 
+    // ฟังก์ชันคำนวณของที่ถูกถืออยู่ (อัปเดตรองรับชื่อ Gold ให้โชว์หน่วย G สวยๆ)
     function getActiveHolders(itemName) {
         let balances = {};
         dataDeposit.forEach(row => {
             if (row['ชื่อไอเท็ม'] === itemName) {
                 let name = row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
                 let status = row['สถานะ'] || '';
-                let qty = parseInt(row['จำนวน']) || 0;
+                let qty = parseInt(row['จำนวน']?.replace(/,/g, '')) || 0;
                 
                 if (!balances[name]) balances[name] = 0;
                 
@@ -282,7 +277,14 @@
         
         let active = [];
         for (let name in balances) {
-            if (balances[name] > 0) active.push(`👤 ${name} (${balances[name]} ชิ้น)`);
+            if (balances[name] > 0) {
+                // เช็คถ้าเป็น Gold ให้ใส่จุลภาคและหน่วย G
+                if (itemName.toLowerCase() === 'gold') {
+                    active.push(`👤 ${name} (${balances[name].toLocaleString()} G)`);
+                } else {
+                    active.push(`👤 ${name} (${balances[name]} ชิ้น)`);
+                }
+            }
         }
         return active;
     }
@@ -294,7 +296,7 @@
             if (name === memberName) {
                 let itemName = row['ชื่อไอเท็ม'];
                 let status = row['สถานะ'] || '';
-                let qty = parseInt(row['จำนวน']) || 0;
+                let qty = parseInt(row['จำนวน']?.replace(/,/g, '')) || 0;
                 
                 if (!balances[itemName]) balances[itemName] = 0;
                 
@@ -310,7 +312,7 @@
         return holdingItems;
     }
 
-    // --- วาดหน้าสมาชิก (ดีไซน์การ์ดแนวนอน) ---
+    // --- วาดหน้าสมาชิก ---
     function renderMembers() {
         const container = document.getElementById('membersContainer');
         container.innerHTML = '';
@@ -358,18 +360,13 @@
                         </div>
                     `;
                 });
-
                 sectionHtml += `</div>`; 
                 container.innerHTML += sectionHtml; 
             }
         });
-
-        if (dataMembers.length === 0) {
-            container.innerHTML = `<div style="text-align: center; color: #ccc; margin-top: 20px;">ไม่มีข้อมูลสมาชิก 🍃</div>`;
-        }
     }
 
-    // --- วาดหน้าไอเท็มแบบ List (เรียง A-Z) ---
+    // --- วาดหน้าไอเท็ม ---
     function renderItems() {
         const grid = document.getElementById('itemsGrid');
         const goldContainer = document.getElementById('goldBannerContainer');
@@ -388,14 +385,29 @@
         }
 
         if (goldItem && (currentItemFilter === 'All')) {
-            let qty = goldItem['คงเหลือ'] || '0';
-            let displayQty = !isNaN(qty.toString().replace(/,/g, '')) ? Number(qty.toString().replace(/,/g, '')).toLocaleString() : qty;
+            let remain = goldItem['คงเหลือ'] || '0';
+            let total = goldItem['จำนวนทั้งหมด'] || '0';
+            
+            // แปลงตัวเลขใส่จุลภาค
+            let displayRemain = !isNaN(remain.toString().replace(/,/g, '')) ? Number(remain.toString().replace(/,/g, '')).toLocaleString() : remain;
+            let displayTotal = !isNaN(total.toString().replace(/,/g, '')) ? Number(total.toString().replace(/,/g, '')).toLocaleString() : total;
+            
             let safeGoldName = encodeURIComponent(goldItem['ชื่อไอเท็ม']);
 
+            // สร้างป้ายคนยืมเงิน
+            let activeHolders = getActiveHolders(goldItem['ชื่อไอเท็ม']);
+            let holdersHtml = '';
+            if (activeHolders.length > 0) {
+                holdersHtml = `<div class="gold-remain-badge">มียอดคนยืม: ${activeHolders.length} คน</div>`;
+            }
+
             goldContainer.innerHTML = `
-                <div class="gold-banner" onclick="openItemModal('${safeGoldName}', '🪙', '${qty}', '${goldItem['จำนวนทั้งหมด']}')">
+                <div class="gold-banner" onclick="openItemModal('${safeGoldName}', '🪙', '${displayRemain} G', '${displayTotal} G')">
                     <div class="gold-title"><span style="font-size: 28px;">🪙</span> Gold กองกลาง</div>
-                    <div class="gold-amount">${displayQty} G</div>
+                    <div class="gold-amount">
+                        ${displayRemain} / ${displayTotal} G
+                        ${holdersHtml}
+                    </div>
                 </div>
             `;
         }
@@ -453,13 +465,9 @@
                 </div>
             `;
         });
-
-        if (otherItems.length === 0 && (!goldItem || currentItemFilter !== 'All')) {
-            grid.innerHTML = `<div style="text-align: center; color: #ccc; margin-top: 20px;">ไม่มีไอเท็มในหมวดหมู่นี้ 🍃</div>`;
-        }
     }
 
-    // --- วาดหน้าประวัติ (แสดงยอดเงินที่ขายได้ด้วย) ---
+    // --- วาดหน้าประวัติ (แก้ไขให้รองรับยอดติดลบเวลาซื้อของ) ---
     function renderLogs() {
         const container = document.getElementById('logsContainer');
         container.innerHTML = '';
@@ -471,27 +479,32 @@
             let sColor = getStatusColor(row['สถานะ']);
             let status = row['สถานะ'] || '';
             
-            // ดึงค่าจากคอลัมน์ "รายรับ Gold" (เปลี่ยนชื่อตัวแปรให้ตรงกับหัวคอลัมน์ที่คุณตั้งได้เลย)
+            // อ่านค่าจากช่อง "รายรับ Gold" และเช็คว่าเป็นลบหรือบวก
             let goldIncome = row['รายรับ Gold'] || row['เงินที่ได้'] || row['ราคาขาย'] || ''; 
-            
-            let actionText = '➔';
             let goldTextHtml = '';
 
-            if(status.includes('ขาย')) {
-                actionText = '💰 ขายโดย';
-                // ถ้าช่องยอดเงินมีการใส่ตัวเลขไว้ ให้แปลงใส่ลูกน้ำแล้วโชว์
-                if(goldIncome && goldIncome !== '-' && goldIncome !== '0') {
-                    let formattedGold = !isNaN(goldIncome.toString().replace(/,/g, '')) ? Number(goldIncome.toString().replace(/,/g, '')).toLocaleString() : goldIncome;
-                    goldTextHtml = `<span class="gold-earned-text">(+${formattedGold} G)</span>`;
+            if (goldIncome && goldIncome !== '-' && goldIncome !== '0') {
+                let numGold = Number(goldIncome.toString().replace(/,/g, ''));
+                if (numGold > 0) {
+                    goldTextHtml = `<span style="color: #d4af37; font-weight: 600; font-size: 13px;">(+${numGold.toLocaleString()} G)</span>`;
+                } else if (numGold < 0) {
+                    goldTextHtml = `<span style="color: #ff8b94; font-weight: 600; font-size: 13px;">(${numGold.toLocaleString()} G)</span>`;
                 }
             }
+
+            // จัด Format จำนวนของ กรณีที่เป็นการยืมเงิน (ตัวเลขหลักล้านจะได้สวยๆ)
+            let rawQty = row['จำนวน'] ? row['จำนวน'].toString().replace(/,/g, '') : '0';
+            let formattedQty = !isNaN(rawQty) ? Number(rawQty).toLocaleString() : rawQty;
+            
+            let actionText = '➔';
+            if(status.includes('ขาย') || status.includes('ซื้อ')) actionText = '👤 จัดการโดย';
 
             container.innerHTML += `
                 <div class="log-item">
                     <div>
-                        <div class="log-detail">${row['ชื่อไอเท็ม']} <span style="font-size:12px; font-weight:normal; color:#888;">x${row['จำนวน']}</span></div>
+                        <div class="log-detail">${row['ชื่อไอเท็ม']} <span style="font-size:12px; font-weight:normal; color:#888;">x${formattedQty}</span></div>
                         <div class="log-date">
-                            👤 ${holderName} &nbsp;•&nbsp; 📅 ${row['วันที่']} 
+                            ${actionText} ${holderName} &nbsp;•&nbsp; 📅 ${row['วันที่']} 
                             ${goldTextHtml ? `&nbsp;•&nbsp; ${goldTextHtml}` : ''}
                         </div>
                     </div>
@@ -501,14 +514,14 @@
         });
     }
 
-    // --- อัปเดต Modal ของไอเท็มให้โชว์เงินที่ขายได้ด้วย ---
     function openItemModal(safeItemName, icon, remain, total) {
         let itemName = decodeURIComponent(safeItemName);
         document.getElementById('modalItemName').innerText = itemName;
         document.getElementById('modalIcon').innerText = icon;
         
         let modalBadge = document.getElementById('modalBadge');
-        modalBadge.innerText = `สถานะ: ${remain} / ${total} ชิ้น`;
+        // ใส่การป้องกัน ถ้าส่งค่ามาเป็นเลข 0 ให้มันไม่มีคำว่า G เด้งแปลกๆ
+        modalBadge.innerText = `สถานะ: ${remain} / ${total} ${itemName.toLowerCase() === 'gold' ? '' : 'ชิ้น'}`;
         modalBadge.className = 'card-badge ' + (total == 0 ? 'gray' : (remain == 0 ? 'red' : ''));
 
         const holderList = document.getElementById('modalHolderList');
@@ -523,14 +536,20 @@
             reversedLogs.forEach(record => {
                 let sColor = getStatusColor(record['สถานะ']);
                 let holderName = record['อยู่ที่'] || record['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ';
-                let status = record['สถานะ'] || '';
                 
+                let rawQty = record['จำนวน'] ? record['จำนวน'].toString().replace(/,/g, '') : '0';
+                let formattedQty = !isNaN(rawQty) ? Number(rawQty).toLocaleString() : rawQty;
+
                 let goldIncome = record['รายรับ Gold'] || record['เงินที่ได้'] || record['ราคาขาย'] || ''; 
                 let goldTextHtml = '';
 
-                if(status.includes('ขาย') && goldIncome && goldIncome !== '-' && goldIncome !== '0') {
-                    let formattedGold = !isNaN(goldIncome.toString().replace(/,/g, '')) ? Number(goldIncome.toString().replace(/,/g, '')).toLocaleString() : goldIncome;
-                    goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${formattedGold} G</span>`;
+                if (goldIncome && goldIncome !== '-' && goldIncome !== '0') {
+                    let numGold = Number(goldIncome.toString().replace(/,/g, ''));
+                    if (numGold > 0) {
+                        goldTextHtml = `<br><span style="color:#d4af37; font-weight:600; font-size:11px;">+${numGold.toLocaleString()} G</span>`;
+                    } else if (numGold < 0) {
+                        goldTextHtml = `<br><span style="color:#ff8b94; font-weight:600; font-size:11px;">${numGold.toLocaleString()} G</span>`;
+                    }
                 }
 
                 holderList.innerHTML += `
@@ -541,7 +560,7 @@
                             ${goldTextHtml}
                         </div>
                         <span class="card-badge" style="background:${sColor}20; color:${sColor}; font-size:11px;">
-                            ${record['สถานะ']} (${record['จำนวน']})
+                            ${record['สถานะ']} (${formattedQty})
                         </span>
                     </div>
                 `;
@@ -572,10 +591,13 @@
             itemsList.innerHTML = '<div style="text-align:center; color:#ccc; padding:20px;">ไม่ได้ยืมไอเท็มกิลด์ไว้ 🍃</div>';
         } else {
             holdingItems.forEach(item => {
+                // เช็คถ้าถือ Gold ให้โชว์หน่วย G แทน
+                let qtyDisplay = item.name.toLowerCase() === 'gold' ? `${item.qty.toLocaleString()} G` : `${item.qty} ชิ้น`;
+                
                 itemsList.innerHTML += `
                     <div class="holder-item">
-                        <span>🎁 ${item.name}</span>
-                        <span class="card-badge red" style="font-size:12px;">ถืออยู่: ${item.qty} ชิ้น</span>
+                        <span>${item.name.toLowerCase() === 'gold' ? '🪙' : '🎁'} ${item.name}</span>
+                        <span class="card-badge red" style="font-size:12px;">ถืออยู่: ${qtyDisplay}</span>
                     </div>
                 `;
             });
