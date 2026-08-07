@@ -63,7 +63,7 @@
         .gold-amount-sub { font-size: 13px; color: #a0a0a0; font-weight: 400; margin-top: 6px; }
         .gold-remain-badge { background: #fffdf2; border: 1px solid #d4af37; color: #d4af37; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-top: 6px;}
 
-        /* --- ส่วนของ Grid สมาชิก (แนวนอน) --- */
+        /* --- ส่วนของ Grid สมาชิก --- */
         .grid-layout { display: grid; gap: 15px; }
         .members-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } 
         
@@ -73,7 +73,6 @@
             border-bottom: 2px dashed #e1eff9; display: flex; align-items: baseline; gap: 10px;
         }
 
-        /* การ์ดสมาชิก */
         .member-card { 
             background: white; border-radius: 16px; padding: 12px 15px; 
             display: flex; align-items: center; gap: 15px; text-align: left;
@@ -185,27 +184,23 @@
     </div>
 </div>
 
-<!-- Popup สำหรับ ไอเท็ม -->
 <div class="modal-overlay" id="itemModal" onclick="closeModal(event, 'itemModal')">
     <div class="modal-box">
         <button class="close-btn" onclick="document.getElementById('itemModal').style.display='none'">×</button>
         <div class="item-icon" id="modalIcon" style="font-size: 50px;">🎁</div>
         <h2 id="modalItemName" style="margin-top: 0; color: #7cb9e8; font-size: 18px;">ชื่อไอเท็ม</h2>
         <div class="card-badge" id="modalBadge" style="margin: 0 auto 15px auto; display: table;">เหลือ: 0/0</div>
-        
         <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">ประวัติการทำรายการ:</p>
         <div class="holder-list" id="modalHolderList"></div>
     </div>
 </div>
 
-<!-- Popup สำหรับ สมาชิก -->
 <div class="modal-overlay" id="memberModal" onclick="closeModal(event, 'memberModal')">
     <div class="modal-box">
         <button class="close-btn" onclick="document.getElementById('memberModal').style.display='none'">×</button>
         <div class="item-icon" id="memberModalIcon" style="font-size: 50px;">👤</div>
         <h2 id="memberModalName" style="margin-top: 0; color: #7cb9e8; font-size: 18px;">ชื่อตัวละคร</h2>
         <div id="memberModalRoles" style="margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 5px;"></div>
-        
         <p style="color: #888; font-size: 13px; margin-bottom: 5px; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 5px;">🎒 ไอเท็ม/เงิน ที่กำลังถืออยู่:</p>
         <div class="holder-list" id="memberModalItems"></div>
     </div>
@@ -259,7 +254,7 @@
         return '#aaa';
     }
 
-    // ฟังก์ชันคำนวณไอเท็ม (อัปเกรดให้กันปัญหา Spacebar และพิมพ์เล็กพิมพ์ใหญ่ 100%)
+    // 💡 ฟังก์ชันนี้ถูกแก้ให้กลับมาถูกต้องแล้ว: เพิ่มของในตัวแค่ตอน ยืม/เบิก และลบตอน คืน เท่านั้น
     function getActiveHolders(itemName) {
         let balances = {};
         let targetItem = (itemName || '').trim().toLowerCase();
@@ -268,7 +263,6 @@
             let currentItem = (row['ชื่อไอเท็ม'] || '').trim().toLowerCase();
             
             if (currentItem === targetItem) {
-                // ดึงชื่อคนมา (ถ้าว่างให้ใส่ ไม่ระบุชื่อ)
                 let rawName = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || 'ไม่ระบุชื่อ').trim();
                 let status = (row['สถานะ'] || '').trim();
                 let qty = parseInt(row['จำนวน']?.toString().replace(/,/g, '')) || 0;
@@ -276,7 +270,7 @@
                 if (!balances[rawName]) balances[rawName] = 0;
                 
                 if (status.includes('เบิก') || status.includes('ยืม')) balances[rawName] += qty;
-                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[rawName] -= qty;
+                if (status.includes('คืน')) balances[rawName] -= qty;
             }
         });
         
@@ -293,7 +287,7 @@
         return active;
     }
 
-    // ฟังก์ชันคำนวณของที่คนๆ นั้นถืออยู่ (กันปัญหา Spacebar 100%)
+    // 💡 ฟังก์ชันนี้ถูกแก้ให้กลับมาถูกต้องแล้ว: เพิ่มของในตัวแค่ตอน ยืม/เบิก และลบตอน คืน เท่านั้น
     function getBorrowedItemsByMember(memberName) {
         let balances = {};
         let targetMember = (memberName || '').trim().toLowerCase();
@@ -302,7 +296,6 @@
             let name = (row['อยู่ที่'] || row['อยู่ที่ใคร'] || '').trim().toLowerCase();
             
             if (name === targetMember) {
-                // เก็บชื่อไอเท็มแบบต้นฉบับไว้โชว์สวยๆ
                 let originalItemName = (row['ชื่อไอเท็ม'] || '').trim();
                 if (!originalItemName) return;
 
@@ -312,7 +305,7 @@
                 if (!balances[originalItemName]) balances[originalItemName] = 0;
                 
                 if (status.includes('เบิก') || status.includes('ยืม')) balances[originalItemName] += qty;
-                if (status.includes('คืน') || status.includes('ฝาก') || status.includes('ขาย')) balances[originalItemName] -= qty;
+                if (status.includes('คืน')) balances[originalItemName] -= qty;
             }
         });
 
