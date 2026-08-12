@@ -65,16 +65,16 @@
             padding: 10px 15px; display: flex; flex-direction: column;
         }
         .role-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;
         }
         .role-title { font-size: 15px; font-weight: 600; margin: 0; }
         .role-count { font-size: 13px; color: #888; background: #eee; padding: 2px 10px; border-radius: 12px; }
 
-        /* พื้นที่วางการ์ด (Drop Zone) */
+        /* พื้นที่วางการ์ด (Drop Zone) ปรับให้กะทัดรัดขึ้น แต่มี Padding ให้ลากใส่ง่าย */
         .drop-zone {
             display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            min-height: 100px; padding: 15px; transition: all 0.2s; border-radius: 12px;
-            border: 2px dashed transparent;
+            min-height: 50px; padding: 10px; transition: all 0.2s; border-radius: 12px;
+            border: 2px dashed transparent; align-content: start;
         }
         .drop-zone.drag-over { background-color: #f0f8ff; border-color: #7cb9e8; }
 
@@ -185,21 +185,17 @@
             download: true, 
             header: true, 
             complete: function(results) {
-                // กรองเฉพาะคนที่มีชื่อ
                 members = results.data.filter(row => row['ชื่อตัวละคร (IGN)']);
                 
-                // จัดเรียงข้อมูล: อาชีพ (DPS -> Tank -> Support) และตามตัวอักษร
                 members.sort((a, b) => {
                     let roleA = getBaseRole(a['ตำแหน่ง(หลัก)']);
                     let roleB = getBaseRole(b['ตำแหน่ง(หลัก)']);
                     
-                    // ให้น้ำหนักอาชีพเพื่อใช้เรียงลำดับ
                     const roleWeights = { 'dps': 1, 'tank': 2, 'support': 3 };
                     let diff = roleWeights[roleA] - roleWeights[roleB];
                     
-                    if (diff !== 0) return diff; // เรียงตามอาชีพก่อน
+                    if (diff !== 0) return diff; 
                     
-                    // ถ้าอาชีพเหมือนกัน ให้เรียงตามตัวอักษรชื่อ
                     let nameA = (a['ชื่อตัวละคร (IGN)'] || '').trim();
                     let nameB = (b['ชื่อตัวละคร (IGN)'] || '').trim();
                     return nameA.localeCompare(nameB, 'th');
@@ -210,13 +206,12 @@
         });
     }
 
-    // แปลงชื่อคลาสเป็น Role พื้นฐาน
     function getBaseRole(roleText) {
-        if (!roleText) return 'dps'; // ค่าเริ่มต้น
+        if (!roleText) return 'dps'; 
         let r = roleText.toLowerCase();
         if (r.includes('tank')) return 'tank';
         if (r.includes('support')) return 'support';
-        return 'dps'; // นอกนั้นถือเป็น DPS
+        return 'dps'; 
     }
 
     function renderPool() {
@@ -249,7 +244,6 @@
         updateCounts();
     }
 
-    // --- ระบบ Drag & Drop ---
     function dragStart(e) {
         draggedItem = this;
         setTimeout(() => this.style.opacity = '0.4', 0);
@@ -278,7 +272,6 @@
                 this.classList.remove('drag-over');
 
                 if (draggedItem) {
-                    // ถ้าลากไปปล่อยในโซนอาชีพ (DPS, Tank, Support) ให้เปลี่ยนไอคอนตามโซนนั้นๆ ทันที
                     let dropRole = this.dataset.role; 
                     if (dropRole) {
                         draggedItem.dataset.role = dropRole;
@@ -291,7 +284,6 @@
         });
     }
 
-    // --- ระบบนับจำนวนแบบ Real-time ---
     function updateCounts() {
         let dpsCount = document.getElementById('zone-dps').children.length;
         let tankCount = document.getElementById('zone-tank').children.length;
@@ -305,7 +297,6 @@
         
         document.getElementById('total-count').innerText = `รวม: ${total} คน`;
         
-        // ถ้ายอดรวมเกิน 12 คน ให้เปลี่ยนสีแจ้งเตือนนิดหน่อย
         let totalBadge = document.getElementById('total-count');
         if(total > 12) {
             totalBadge.style.color = '#ff8b94';
