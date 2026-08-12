@@ -62,7 +62,7 @@
         /* โซนของแต่ละ Role ใน Raid */
         .role-section {
             background: #fdfdfd; border: 1px solid #f0f0f0; border-radius: 16px; 
-            padding: 15px; display: flex; flex-direction: column;
+            padding: 10px 15px; display: flex; flex-direction: column;
         }
         .role-header {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
@@ -73,9 +73,10 @@
         /* พื้นที่วางการ์ด (Drop Zone) */
         .drop-zone {
             display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            min-height: 60px; transition: background 0.2s; border-radius: 12px;
+            min-height: 100px; padding: 15px; transition: all 0.2s; border-radius: 12px;
+            border: 2px dashed transparent;
         }
-        .drop-zone.drag-over { background-color: #f0f8ff; border: 1px dashed #7cb9e8; }
+        .drop-zone.drag-over { background-color: #f0f8ff; border-color: #7cb9e8; }
 
         /* สีพิเศษของแต่ละ Role */
         .role-section.dps .role-title { color: #ff8b94; }
@@ -98,19 +99,20 @@
         .member-card:active { cursor: grabbing; }
         
         .role-icon {
-            font-size: 20px; cursor: pointer; padding: 5px; background: #f9fbfc;
-            border-radius: 8px; transition: 0.2s; flex-shrink: 0;
+            font-size: 20px; padding: 5px; background: #f9fbfc;
+            border-radius: 8px; flex-shrink: 0;
         }
-        .role-icon:hover { background: #ffe4e1; transform: scale(1.1); }
         .member-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
     </style>
 </head>
 <body>
 
     <h1>⚔️ จัดทีมลุย Raid </h1>
+    
     <div style="text-align: center; margin-bottom: 25px; margin-top: -15px;">
-    <a href="index.html" style="text-decoration: none; background: #f0f4f8; border: 1px solid #7cb9e8; color: #7cb9e8; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;">☁️ กลับคลังกิลด์</a>
-</div>
+        <a href="index.html" style="text-decoration: none; background: #f0f4f8; border: 1px solid #7cb9e8; color: #7cb9e8; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;">☁️ กลับคลังกิลด์</a>
+    </div>
+
     <div class="layout-container">
         
         <!-- ฝั่งซ้าย: รายชื่อสมาชิกทั้งหมด -->
@@ -132,10 +134,6 @@
                 <h3 class="raid-title">🛡️ กองกำลัง Raid</h3>
                 <div class="raid-total-badge" id="total-count">รวม: 0 คน</div>
             </div>
-
-            <p style="font-size: 12px; color: #aaa; margin-top: -5px; text-align: center;">
-                *สามารถคลิกที่ไอคอน ⚔️🛡️💖 หน้าชื่อ เพื่อเปลี่ยนตำแหน่งให้สมาชิกได้*
-            </p>
 
             <!-- หมวด DPS -->
             <div class="role-section dps">
@@ -176,9 +174,9 @@
 
     // ระบบ Role
     const rolesData = {
-        'dps': { icon: '⚔️', title: 'DPS', next: 'tank' },
-        'tank': { icon: '🛡️', title: 'Tank', next: 'support' },
-        'support': { icon: '💖', title: 'Support', next: 'dps' }
+        'dps': { icon: '⚔️', title: 'DPS' },
+        'tank': { icon: '🛡️', title: 'Tank' },
+        'support': { icon: '💖', title: 'Support' }
     };
 
     function fetchMembers() {
@@ -187,7 +185,26 @@
             download: true, 
             header: true, 
             complete: function(results) {
+                // กรองเฉพาะคนที่มีชื่อ
                 members = results.data.filter(row => row['ชื่อตัวละคร (IGN)']);
+                
+                // จัดเรียงข้อมูล: อาชีพ (DPS -> Tank -> Support) และตามตัวอักษร
+                members.sort((a, b) => {
+                    let roleA = getBaseRole(a['ตำแหน่ง(หลัก)']);
+                    let roleB = getBaseRole(b['ตำแหน่ง(หลัก)']);
+                    
+                    // ให้น้ำหนักอาชีพเพื่อใช้เรียงลำดับ
+                    const roleWeights = { 'dps': 1, 'tank': 2, 'support': 3 };
+                    let diff = roleWeights[roleA] - roleWeights[roleB];
+                    
+                    if (diff !== 0) return diff; // เรียงตามอาชีพก่อน
+                    
+                    // ถ้าอาชีพเหมือนกัน ให้เรียงตามตัวอักษรชื่อ
+                    let nameA = (a['ชื่อตัวละคร (IGN)'] || '').trim();
+                    let nameB = (b['ชื่อตัวละคร (IGN)'] || '').trim();
+                    return nameA.localeCompare(nameB, 'th');
+                });
+
                 renderPool();
             }
         });
@@ -218,7 +235,7 @@
             card.dataset.role = baseRole;
 
             card.innerHTML = `
-                <div class="role-icon" onclick="toggleRole(this)" title="คลิกเพื่อเปลี่ยนหน้าที่">${icon}</div>
+                <div class="role-icon" title="${rolesData[baseRole].title}">${icon}</div>
                 <div class="member-name">${name}</div>
             `;
 
@@ -229,25 +246,6 @@
         });
 
         setupDropZones();
-        updateCounts();
-    }
-
-    // --- ระบบเปลี่ยน Role เมื่อคลิก ---
-    function toggleRole(element) {
-        let card = element.parentElement;
-        let currentRole = card.dataset.role;
-        let nextRole = rolesData[currentRole].next;
-        
-        // อัปเดตข้อมูลในการ์ด
-        card.dataset.role = nextRole;
-        element.innerText = rolesData[nextRole].icon;
-        
-        // ถ้าย้ายมาฝั่งขวา (ในตี้) แล้วกดเปลี่ยนอาชีพ -> ให้สลับโซนอัตโนมัติ
-        let currentZone = card.parentElement.id;
-        if (currentZone !== 'zone-pool') {
-            document.getElementById('zone-' + nextRole).appendChild(card);
-        }
-
         updateCounts();
     }
 
@@ -280,12 +278,12 @@
                 this.classList.remove('drag-over');
 
                 if (draggedItem) {
-                    // ถ้าลากไปปล่อยในโซนอาชีพ (DPS, Tank, Support)
+                    // ถ้าลากไปปล่อยในโซนอาชีพ (DPS, Tank, Support) ให้เปลี่ยนไอคอนตามโซนนั้นๆ ทันที
                     let dropRole = this.dataset.role; 
                     if (dropRole) {
-                        // เปลี่ยนอาชีพให้ตรงกับโซนที่ไปวางโดยอัตโนมัติ
                         draggedItem.dataset.role = dropRole;
                         draggedItem.querySelector('.role-icon').innerText = rolesData[dropRole].icon;
+                        draggedItem.querySelector('.role-icon').title = rolesData[dropRole].title;
                     }
                     this.appendChild(draggedItem);
                 }
