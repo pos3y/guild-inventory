@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guild Raid Organizer ⚔️</title>
+    <!-- นำเข้าฟอนต์ Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <style>
+        /* --- ธีมหลัก --- */
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background-color: #f9fbfc; 
+            color: #4a4a4a; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 30px; }
+
+        .layout-container {
+            display: flex; gap: 20px; max-width: 1200px; margin: 0 auto;
+            flex-direction: column;
+        }
+        @media(min-width: 768px) {
+            .layout-container { flex-direction: row; }
+        }
+
+        /* --- ฝั่งซ้าย: Member Pool --- */
+        .roster-panel {
+            flex: 1; background: white; border-radius: 20px; padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03); border: 2px dashed #e1eff9;
+            display: flex; flex-direction: column; max-height: 85vh;
+        }
+        .roster-header {
+            display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
+        }
+        .roster-title { font-size: 18px; font-weight: 600; color: #7cb9e8; margin: 0; }
+        .member-pool {
+            flex: 1; overflow-y: auto; display: grid; gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            align-content: start; min-height: 150px; padding-bottom: 10px;
+        }
+
+        /* --- ฝั่งขวา: Raid Party --- */
+        .raid-panel {
+            flex: 2; display: flex; flex-direction: column; gap: 15px;
+            background: white; border-radius: 20px; padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03); border-top: 6px solid #ffebba;
+        }
+        .raid-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px dashed #eee; padding-bottom: 15px; margin-bottom: 10px;
+        }
+        .raid-title { font-size: 20px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 10px;}
+        .raid-total-badge {
+            background: #fffdf2; color: #d4af37; border: 1px solid #d4af37;
+            padding: 5px 15px; border-radius: 20px; font-size: 16px; font-weight: 600;
+        }
+
+        /* โซนของแต่ละ Role ใน Raid */
+        .role-section {
+            background: #fdfdfd; border: 1px solid #f0f0f0; border-radius: 16px; 
+            padding: 15px; display: flex; flex-direction: column;
+        }
+        .role-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .role-title { font-size: 15px; font-weight: 600; margin: 0; }
+        .role-count { font-size: 13px; color: #888; background: #eee; padding: 2px 10px; border-radius: 12px; }
+
+        /* พื้นที่วางการ์ด (Drop Zone) */
+        .drop-zone {
+            display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            min-height: 60px; transition: background 0.2s; border-radius: 12px;
+        }
+        .drop-zone.drag-over { background-color: #f0f8ff; border: 1px dashed #7cb9e8; }
+
+        /* สีพิเศษของแต่ละ Role */
+        .role-section.dps .role-title { color: #ff8b94; }
+        .role-section.dps .role-count { background: #fff0f0; color: #ff8b94; }
+        
+        .role-section.tank .role-title { color: #7cb9e8; }
+        .role-section.tank .role-count { background: #f0f4f8; color: #7cb9e8; }
+        
+        .role-section.support .role-title { color: #a8e6cf; }
+        .role-section.support .role-count { background: #f2fcf9; color: #4bba96; }
+
+        /* --- การ์ดสมาชิก --- */
+        .member-card {
+            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 10px;
+            display: flex; align-items: center; gap: 8px; cursor: grab;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s ease;
+            user-select: none;
+        }
+        .member-card:hover { transform: translateY(-2px); border-color: #7cb9e8; box-shadow: 0 4px 8px rgba(124,185,232,0.15);}
+        .member-card:active { cursor: grabbing; }
+        
+        .role-icon {
+            font-size: 20px; cursor: pointer; padding: 5px; background: #f9fbfc;
+            border-radius: 8px; transition: 0.2s; flex-shrink: 0;
+        }
+        .role-icon:hover { background: #ffe4e1; transform: scale(1.1); }
+        .member-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
+    </style>
+</head>
+<body>
+
+    <h1>⚔️ จัดทีมลุย Raid </h1>
+
+    <div class="layout-container">
+        
+        <!-- ฝั่งซ้าย: รายชื่อสมาชิกทั้งหมด -->
+        <div class="roster-panel">
+            <div class="roster-header">
+                <h3 class="roster-title">👥 รายชื่อสมาชิก</h3>
+            </div>
+            <p style="font-size: 12px; color: #888; margin-top: -5px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                ลากชื่อข้ามไปจัดตี้ฝั่งขวา
+            </p>
+            <div class="member-pool drop-zone" id="zone-pool">
+                <!-- การ์ดสมาชิกจะโผล่ที่นี่ -->
+            </div>
+        </div>
+
+        <!-- ฝั่งขวา: Raid Party -->
+        <div class="raid-panel">
+            <div class="raid-header">
+                <h3 class="raid-title">🛡️ กองกำลัง Raid</h3>
+                <div class="raid-total-badge" id="total-count">รวม: 0 คน</div>
+            </div>
+
+            <p style="font-size: 12px; color: #aaa; margin-top: -5px; text-align: center;">
+                *สามารถคลิกที่ไอคอน ⚔️🛡️💖 หน้าชื่อ เพื่อเปลี่ยนตำแหน่งให้สมาชิกได้*
+            </p>
+
+            <!-- หมวด DPS -->
+            <div class="role-section dps">
+                <div class="role-header">
+                    <h4 class="role-title">⚔️ หน่วยทำดาเมจ (DPS)</h4>
+                    <span class="role-count" id="count-dps">0 คน</span>
+                </div>
+                <div class="drop-zone" id="zone-dps" data-role="dps"></div>
+            </div>
+
+            <!-- หมวด Tank -->
+            <div class="role-section tank">
+                <div class="role-header">
+                    <h4 class="role-title">🛡️ หน่วยแทงค์ (Tank)</h4>
+                    <span class="role-count" id="count-tank">0 คน</span>
+                </div>
+                <div class="drop-zone" id="zone-tank" data-role="tank"></div>
+            </div>
+
+            <!-- หมวด Support -->
+            <div class="role-section support">
+                <div class="role-header">
+                    <h4 class="role-title">💖 หน่วยซัพพอร์ต (Support)</h4>
+                    <span class="role-count" id="count-support">0 คน</span>
+                </div>
+                <div class="drop-zone" id="zone-support" data-role="support"></div>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    // 🔴 ลิงก์ CSV จากระบบเดิม
+    const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
+    
+    let members = [];
+    let draggedItem = null;
+
+    // ระบบ Role
+    const rolesData = {
+        'dps': { icon: '⚔️', title: 'DPS', next: 'tank' },
+        'tank': { icon: '🛡️', title: 'Tank', next: 'support' },
+        'support': { icon: '💖', title: 'Support', next: 'dps' }
+    };
+
+    function fetchMembers() {
+        let noCache = '&t=' + new Date().getTime(); 
+        Papa.parse(URL_MEMBERS + noCache, { 
+            download: true, 
+            header: true, 
+            complete: function(results) {
+                members = results.data.filter(row => row['ชื่อตัวละคร (IGN)']);
+                renderPool();
+            }
+        });
+    }
+
+    // แปลงชื่อคลาสเป็น Role พื้นฐาน
+    function getBaseRole(roleText) {
+        if (!roleText) return 'dps'; // ค่าเริ่มต้น
+        let r = roleText.toLowerCase();
+        if (r.includes('tank')) return 'tank';
+        if (r.includes('support')) return 'support';
+        return 'dps'; // นอกนั้นถือเป็น DPS
+    }
+
+    function renderPool() {
+        const pool = document.getElementById('zone-pool');
+        pool.innerHTML = '';
+        
+        members.forEach((m, index) => {
+            let name = m['ชื่อตัวละคร (IGN)'].trim();
+            let baseRole = getBaseRole(m['ตำแหน่ง(หลัก)']);
+            let icon = rolesData[baseRole].icon;
+
+            let card = document.createElement('div');
+            card.className = 'member-card';
+            card.draggable = true;
+            card.id = 'member-' + index;
+            card.dataset.role = baseRole;
+
+            card.innerHTML = `
+                <div class="role-icon" onclick="toggleRole(this)" title="คลิกเพื่อเปลี่ยนหน้าที่">${icon}</div>
+                <div class="member-name">${name}</div>
+            `;
+
+            card.addEventListener('dragstart', dragStart);
+            card.addEventListener('dragend', dragEnd);
+
+            pool.appendChild(card);
+        });
+
+        setupDropZones();
+        updateCounts();
+    }
+
+    // --- ระบบเปลี่ยน Role เมื่อคลิก ---
+    function toggleRole(element) {
+        let card = element.parentElement;
+        let currentRole = card.dataset.role;
+        let nextRole = rolesData[currentRole].next;
+        
+        // อัปเดตข้อมูลในการ์ด
+        card.dataset.role = nextRole;
+        element.innerText = rolesData[nextRole].icon;
+        
+        // ถ้าย้ายมาฝั่งขวา (ในตี้) แล้วกดเปลี่ยนอาชีพ -> ให้สลับโซนอัตโนมัติ
+        let currentZone = card.parentElement.id;
+        if (currentZone !== 'zone-pool') {
+            document.getElementById('zone-' + nextRole).appendChild(card);
+        }
+
+        updateCounts();
+    }
+
+    // --- ระบบ Drag & Drop ---
+    function dragStart(e) {
+        draggedItem = this;
+        setTimeout(() => this.style.opacity = '0.4', 0);
+    }
+
+    function dragEnd() {
+        this.style.opacity = '1';
+        draggedItem = null;
+        updateCounts();
+    }
+
+    function setupDropZones() {
+        const zones = document.querySelectorAll('.drop-zone');
+        zones.forEach(zone => {
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault(); 
+                this.classList.add('drag-over');
+            });
+            
+            zone.addEventListener('dragleave', function(e) {
+                this.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+
+                if (draggedItem) {
+                    // ถ้าลากไปปล่อยในโซนอาชีพ (DPS, Tank, Support)
+                    let dropRole = this.dataset.role; 
+                    if (dropRole) {
+                        // เปลี่ยนอาชีพให้ตรงกับโซนที่ไปวางโดยอัตโนมัติ
+                        draggedItem.dataset.role = dropRole;
+                        draggedItem.querySelector('.role-icon').innerText = rolesData[dropRole].icon;
+                    }
+                    this.appendChild(draggedItem);
+                }
+            });
+        });
+    }
+
+    // --- ระบบนับจำนวนแบบ Real-time ---
+    function updateCounts() {
+        let dpsCount = document.getElementById('zone-dps').children.length;
+        let tankCount = document.getElementById('zone-tank').children.length;
+        let suppCount = document.getElementById('zone-support').children.length;
+        
+        let total = dpsCount + tankCount + suppCount;
+
+        document.getElementById('count-dps').innerText = `${dpsCount} คน`;
+        document.getElementById('count-tank').innerText = `${tankCount} คน`;
+        document.getElementById('count-support').innerText = `${suppCount} คน`;
+        
+        document.getElementById('total-count').innerText = `รวม: ${total} คน`;
+        
+        // ถ้ายอดรวมเกิน 12 คน ให้เปลี่ยนสีแจ้งเตือนนิดหน่อย
+        let totalBadge = document.getElementById('total-count');
+        if(total > 12) {
+            totalBadge.style.color = '#ff8b94';
+            totalBadge.style.borderColor = '#ff8b94';
+            totalBadge.style.background = '#fff0f0';
+        } else {
+            totalBadge.style.color = '#d4af37';
+            totalBadge.style.borderColor = '#d4af37';
+            totalBadge.style.background = '#fffdf2';
+        }
+    }
+
+    window.onload = fetchMembers;
+</script>
+
+</body>
+</html>
