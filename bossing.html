@@ -35,12 +35,12 @@
         }
         
         /* 1. ห้องรวม (Member Pool) */
-        .roster-panel { flex: 1.3; border-top: 6px solid #e1eff9; } /* ปรับ flex ให้กว้างขึ้นนิดนึง */
+        .roster-panel { flex: 1.3; border-top: 6px solid #e1eff9; } 
         
-        /* ปรับ grid ให้เป็น 2 คอลัมน์ถาวร การ์ดจะยาวขึ้น */
+        /* 💡 ล็อกขนาด Grid: ใช้ minmax(0, 1fr) เพื่อบังคับไม่ให้กล่องยืดตามความยาวชื่อ */
         .pool-grid {
             flex: 1; overflow-y: auto; display: grid; gap: 10px;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr)); 
             align-content: start; padding: 10px; min-height: 200px;
             border: 2px dashed transparent; border-radius: 12px; transition: 0.2s;
         }
@@ -75,7 +75,7 @@
             text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.1);
         }
         .current-turn-label { font-size: 12px; color: #a0a0a0; margin-bottom: 5px; font-weight: 600;}
-        .current-turn-name { font-size: 20px; font-weight: 600; color: #d4af37; margin: 0;}
+        .current-turn-name { font-size: 20px; font-weight: 600; color: #d4af37; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 
         /* --- ปุ่มเลื่อนคิว --- */
         .next-btn {
@@ -99,16 +99,27 @@
 
         /* --- การ์ดสมาชิก --- */
         .member-card {
-            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 10px;
-            display: flex; align-items: center; gap: 10px; cursor: grab;
+            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px; /* ลด padding แนวตั้ง */
+            display: flex; align-items: center; gap: 8px; cursor: grab;
             box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: transform 0.1s;
             user-select: none; position: relative;
+            
+            /* 💡 ล็อกความสูงให้ตายตัว การ์ดจะไม่ยืดหดดุกดิกแล้ว */
+            height: 48px; 
+            box-sizing: border-box;
+            width: 100%;
         }
         .member-card:hover { border-color: #7cb9e8; box-shadow: 0 4px 8px rgba(124,185,232,0.15);}
         .member-card.dragging { opacity: 0.5; cursor: grabbing; border: 2px dashed #7cb9e8; }
         
         .role-icon { font-size: 18px; padding: 5px; background: #f9fbfc; border-radius: 8px; flex-shrink: 0;}
-        .member-name { font-size: 14px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        
+        /* 💡 ล็อก Flexbox: สั่งให้ตัดชื่อยาวๆ ด้วย "..." เสมอแทนการดันกล่อง */
+        .member-name { 
+            font-size: 13px; font-weight: 600; flex: 1; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            min-width: 0; 
+        }
         
         /* ปุ่ม + เพิ่มคิวอัตโนมัติ */
         .add-btn {
