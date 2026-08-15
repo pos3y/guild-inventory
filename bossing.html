@@ -10,7 +10,7 @@
     <!-- นำเข้า PapaParse สำหรับอ่าน Sheet -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
-    <!-- นำเข้า Firebase SDK (เวอร์ชัน Compat ที่ใช้งานง่ายที่สุดสำหรับ HTML เพียว) -->
+    <!-- นำเข้า Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
@@ -23,7 +23,7 @@
             margin: 0; 
             padding: 20px; 
         }
-        h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 20px; }
+        h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 30px; }
 
         .layout-container {
             display: flex; gap: 20px; max-width: 1200px; margin: 0 auto;
@@ -38,7 +38,7 @@
             background: white; border-radius: 20px; padding: 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.03); 
             display: flex; flex-direction: column; max-height: 85vh;
-            min-width: 0; /* ล็อกไม่ให้กล่องขยายตามตัวอักษร */
+            min-width: 0; 
         }
         
         .roster-panel { flex: 1.6; border-top: 6px solid #e1eff9; } 
@@ -79,30 +79,38 @@
         .current-turn-label { font-size: 12px; color: #a0a0a0; margin-bottom: 5px; font-weight: 600;}
         .current-turn-name { font-size: 20px; font-weight: 600; color: #d4af37; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 
-        /* --- กลุ่มปุ่มกดควบคุมคิว --- */
-        .action-buttons {
-            display: flex; gap: 10px; margin-bottom: 15px;
-        }
-
+        /* --- ปุ่มเลื่อนคิว --- */
         .next-btn {
             background: #4bba96; color: white; border: none; padding: 10px 15px;
             border-radius: 20px; font-family: 'Prompt', sans-serif; font-weight: 600;
             font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(75, 186, 150, 0.3);
-            flex: 1;
+            width: 100%; margin-bottom: 15px;
         }
         .next-btn:hover { background: #3a9f7d; transform: translateY(-2px); }
         .next-btn:active { transform: translateY(0); }
 
+        /* --- ปุ่มล้างคิว (มุมขวาล่างของจอ) --- */
         .clear-btn {
-            background: #ff8b94; color: white; border: none; padding: 10px 15px;
-            border-radius: 20px; font-family: 'Prompt', sans-serif; font-weight: 600;
-            font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(255, 139, 148, 0.3);
-            white-space: nowrap;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff8b94; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px;
+            border-radius: 20px; 
+            font-family: 'Prompt', sans-serif; 
+            font-weight: 600;
+            font-size: 13px; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            box-shadow: 0 4px 10px rgba(255, 139, 148, 0.3);
+            z-index: 100;
         }
         .clear-btn:hover { background: #e07a82; transform: translateY(-2px); }
         .clear-btn:active { transform: translateY(0); }
 
-        /* --- ลิสต์แนวตั้ง (สำหรับห้องคิวและห้องรอ) --- */
+        /* --- ลิสต์แนวตั้ง --- */
         .vertical-list {
             flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
             min-height: 150px; padding: 10px; transition: all 0.2s; border-radius: 12px;
@@ -157,13 +165,11 @@
 </head>
 <body>
 
+    <!-- ปุ่มล้างคิว มุมขวาล่าง -->
+    <button class="clear-btn" onclick="clearQueue()">🗑️ ล้างคิว</button>
+
     <h1>⏱️ ระบบจัดคิวปาร์ตี้</h1>
     
-    <div style="text-align: center; margin-bottom: 25px; margin-top: -20px;">
-        <a href="index.html" style="text-decoration: none; background: #f0f4f8; border: 1px solid #7cb9e8; color: #7cb9e8; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-right: 10px;">☁️ กลับคลังกิลด์</a>
-        <a href="party.html" style="text-decoration: none; background: #fffdf2; border: 1px solid #d4af37; color: #d4af37; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;">⚔️ ไปหน้าจัดปาร์ตี้</a>
-    </div>
-
     <div class="layout-container">
         
         <!-- ห้อง 1: สมาชิก (Member Pool) -->
@@ -187,11 +193,8 @@
                 <div class="current-turn-name" id="current-turn-display">กำลังโหลดคิว...</div>
             </div>
 
-            <!-- กลุ่มปุ่มควบคุม -->
-            <div class="action-buttons">
-                <button class="next-btn" onclick="nextQueue()">▶️ จบเทิร์น (เลื่อนคิวถัดไป)</button>
-                <button class="clear-btn" onclick="clearQueue()">🗑️ ล้างคิว</button>
-            </div>
+            <!-- ปุ่มเลื่อนคิว (กว้างเต็มเหมือนเดิม) -->
+            <button class="next-btn" onclick="nextQueue()">▶️ จบเทิร์น (เลื่อนคิวถัดไป)</button>
 
             <div class="vertical-list drop-zone" id="zone-active"></div>
         </div>
@@ -210,9 +213,6 @@
     </div>
 
 <script>
-    // ----------------------------------------------------
-    // 1. ตั้งค่าฐานข้อมูล Firebase
-    // ----------------------------------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyCIjmulnl7kcmOhH_w1jSk6-Fms-VQkhsw",
       authDomain: "friendbossqueue.firebaseapp.com",
@@ -224,29 +224,22 @@
       measurementId: "G-03R1X1L4EQ"
     };
 
-    // เปิดใช้งาน Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ----------------------------------------------------
-    // 2. ลอจิกของกิลด์
-    // ----------------------------------------------------
     const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
     
-    let allMembers = [];   // รายชื่อดั้งเดิมจาก Sheet ทั้งหมด
-    let activeQueue = [];  // คิวหลักที่เก็บใน Firebase (เก็บเฉพาะชื่อ)
-    let waitingQueue = []; // คิวรอที่เก็บใน Firebase (เก็บเฉพาะชื่อ)
-    
-    let isDragging = false; // ตัวแปรดักไว้ว่าเรากำลังลากการ์ดอยู่หรือเปล่า
+    let allMembers = [];   
+    let activeQueue = [];  
+    let waitingQueue = []; 
+    let isDragging = false; 
 
-    // ฟังก์ชันเริ่มโหลดข้อมูล
     function init() {
         let noCache = '&t=' + new Date().getTime(); 
         Papa.parse(URL_MEMBERS + noCache, { 
             download: true, header: true, 
             complete: function(results) {
                 let parsed = results.data.filter(row => row['ชื่อตัวละคร (IGN)']);
-                // แมพเก็บแค่ชื่อกับอาชีพ และเรียงตัวอักษร
                 allMembers = parsed.map(row => {
                     return {
                         name: row['ชื่อตัวละคร (IGN)'].trim(),
@@ -254,37 +247,31 @@
                     }
                 }).sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
-                // เริ่มฟังสัญญาณข้อมูลแบบสดๆ จาก Firebase
                 listenToFirebase();
             }
         });
-        setupDropZones(); // เปิดระบบลากวาง
+        setupDropZones(); 
     }
 
-    // ฟังก์ชันเชื่อมต่อกับฐานข้อมูลแบบ Real-time
     function listenToFirebase() {
         db.ref('queues').on('value', (snapshot) => {
-            // ถ้ายูสเซอร์คนนี้กำลัง "ลากเมาส์ค้างอยู่" อย่าเพิ่งอัปเดตหน้าจอเดี๋ยวการ์ดหลุดมือ
             if (isDragging) return; 
 
             const data = snapshot.val() || {};
             activeQueue = data.active || [];
             waitingQueue = data.waiting || [];
             
-            renderAllZones(); // วาดการ์ดลงกล่องใหม่ทั้งหมด
+            renderAllZones(); 
         });
     }
 
-    // เซฟการจัดเรียงจากหน้าเว็บ โยนกลับเข้า Firebase
     function saveQueuesToFirebase() {
         const zoneActive = document.getElementById('zone-active');
         const zoneWaiting = document.getElementById('zone-waiting');
 
-        // อ่านชื่อจากการ์ดที่อยู่ในห้องนั้นๆ เรียงตามลำดับบนหน้าจอ
         const newActive = [...zoneActive.children].map(card => card.dataset.name);
         const newWait = [...zoneWaiting.children].map(card => card.dataset.name);
 
-        // อัปโหลดขึ้นเซิร์ฟเวอร์
         db.ref('queues').set({
             active: newActive,
             waiting: newWait
@@ -299,13 +286,12 @@
         return '⚔️'; 
     }
 
-    // สร้างการ์ด 1 ใบ (ใช้ร่วมกันทุกห้อง)
     function createCard(name, role) {
         let icon = getBaseIcon(role);
         let card = document.createElement('div');
         card.className = 'member-card';
         card.draggable = true;
-        card.dataset.name = name; // แอบเก็บชื่อไว้ใช้ตอนเซฟ
+        card.dataset.name = name; 
 
         card.innerHTML = `
             <div class="rank-number">0</div>
@@ -320,7 +306,6 @@
         return card;
     }
 
-    // วาดหน้าจอใหม่ทั้งหมดโดยดึงอ้างอิงจากคิวใน Firebase
     function renderAllZones() {
         const poolZone = document.getElementById('zone-pool');
         const activeZone = document.getElementById('zone-active');
@@ -330,19 +315,16 @@
         activeZone.innerHTML = '';
         waitZone.innerHTML = '';
 
-        // 1. วาดห้องคิวหลักก่อน (ตามลำดับใน Firebase)
         activeQueue.forEach(name => {
             let memberData = allMembers.find(m => m.name === name);
             if(memberData) activeZone.appendChild(createCard(memberData.name, memberData.role));
         });
 
-        // 2. วาดห้องรอคิว
         waitingQueue.forEach(name => {
             let memberData = allMembers.find(m => m.name === name);
             if(memberData) waitZone.appendChild(createCard(memberData.name, memberData.role));
         });
 
-        // 3. วาดห้องรวม (เฉพาะคนที่ "ไม่ได้" อยู่ใน Active และ Waiting)
         allMembers.forEach(m => {
             if (!activeQueue.includes(m.name) && !waitingQueue.includes(m.name)) {
                 poolZone.appendChild(createCard(m.name, m.role));
@@ -352,11 +334,9 @@
         updateNumbersUI();
     }
 
-    // --- ระบบเพิ่มเข้าคิวด้วยการกดปุ่ม + ---
     function moveToQueue(btnElement) {
         let name = btnElement.closest('.member-card').dataset.name;
         
-        // อัปเดต Array แล้วโยนขึ้น Firebase
         if (activeQueue.length < 12) {
             activeQueue.push(name);
         } else {
@@ -366,31 +346,24 @@
         db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
     }
 
-    // --- ระบบปุ่ม เลื่อนคิว (Next Queue) ---
     function nextQueue() {
         if (activeQueue.length === 0) return;
 
-        // ดึงชื่อคนที่ 1 ออกไป (มันจะกลับไปอยู่ Pool ตอน Render อัตโนมัติเพราะไม่มีชื่อในคิวแล้ว)
         activeQueue.shift(); 
         
-        // ถ้ามีคนรอคิว ดึงคนแรกของคิวรอมาเสียบหลังคิวหลัก
         if (waitingQueue.length > 0) {
             activeQueue.push(waitingQueue.shift()); 
         }
 
-        // เซฟลง Firebase
         db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
     }
 
-    // --- ระบบล้างคิว (Clear Queue) ---
     function clearQueue() {
         if (confirm("⚠️ แน่ใจหรือไม่ว่าต้องการ 'ล้างคิวทั้งหมด'?\n(สมาชิกทุกคนจะถูกส่งกลับไปที่ห้องรวมทันที)")) {
-            // โยน Array ว่างเปล่าขึ้น Firebase ไปล้างกระดาน
             db.ref('queues').set({ active: [], waiting: [] });
         }
     }
 
-    // --- ระบบ Drag & Drop ---
     function dragStart(e) {
         isDragging = true;
         this.classList.add('dragging');
@@ -399,8 +372,6 @@
     function dragEnd() {
         this.classList.remove('dragging');
         isDragging = false;
-        
-        // พอปล่อยเมาส์ ให้อ่านการจัดเรียงบนหน้าจอ แล้วเซฟทับขึ้นฐานข้อมูลเลย!
         saveQueuesToFirebase(); 
     }
 
@@ -429,7 +400,6 @@
             zone.addEventListener('drop', function(e) {
                 e.preventDefault();
                 this.classList.remove('drag-over');
-                // ตัวเซฟเข้า Firebase จะทำงานที่ dragEnd() ครับ
             });
         });
     }
@@ -447,7 +417,6 @@
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    // --- ระบบจัด UI การนับเลข ---
     function updateNumbersUI() {
         const poolZone = document.getElementById('zone-pool');
         const activeZone = document.getElementById('zone-active');
@@ -472,7 +441,6 @@
             currentDisplay.innerText = "- รอจัดคิว -";
         }
 
-        // รันตัวเลขลำดับในหน้าจอ
         [...activeZone.children].forEach((card, index) => {
             let rankElement = card.querySelector('.rank-number');
             rankElement.innerText = index + 1;
@@ -490,7 +458,6 @@
         });
     }
 
-    // เริ่มทำงานเมื่อเปิดเว็บ
     window.onload = init;
 </script>
 
