@@ -35,10 +35,12 @@
         }
         
         /* 1. ห้องรวม (Member Pool) */
-        .roster-panel { flex: 1.2; border-top: 6px solid #e1eff9; }
+        .roster-panel { flex: 1.3; border-top: 6px solid #e1eff9; } /* ปรับ flex ให้กว้างขึ้นนิดนึง */
+        
+        /* ปรับ grid ให้เป็น 2 คอลัมน์ถาวร การ์ดจะยาวขึ้น */
         .pool-grid {
             flex: 1; overflow-y: auto; display: grid; gap: 10px;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             align-content: start; padding: 10px; min-height: 200px;
             border: 2px dashed transparent; border-radius: 12px; transition: 0.2s;
         }
@@ -108,6 +110,15 @@
         .role-icon { font-size: 18px; padding: 5px; background: #f9fbfc; border-radius: 8px; flex-shrink: 0;}
         .member-name { font-size: 14px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         
+        /* ปุ่ม + เพิ่มคิวอัตโนมัติ */
+        .add-btn {
+            background: #e1eff9; color: #7cb9e8; border: none; border-radius: 50%;
+            width: 26px; height: 26px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; font-size: 16px; flex-shrink: 0;
+        }
+        .add-btn:hover { background: #7cb9e8; color: white; }
+
         /* ตัวเลขลำดับ (โชว์เฉพาะเมื่ออยู่ห้องคิวและห้องรอ) */
         .rank-number {
             display: none; width: 28px; height: 28px; background: #4a4a4a; color: white;
@@ -116,7 +127,11 @@
         
         .queue-panel .member-card .rank-number { display: block; background: #4bba96; }
         .waiting-panel .member-card .rank-number { display: block; background: #f39c12; }
-        .roster-panel .member-card .rank-number { display: none; } /* ซ่อนตัวเลขถ้าอยู่ห้องรวม */
+        
+        /* จัดการการแสดงผล UI ภายในของแต่ละห้อง */
+        .roster-panel .member-card .rank-number { display: none; } /* ซ่อนเลขลำดับถ้าอยู่ห้องรวม */
+        .queue-panel .member-card .add-btn,
+        .waiting-panel .member-card .add-btn { display: none; } /* ซ่อนปุ่ม + ถ้าเข้ามาอยู่ในคิวแล้ว */
 
     </style>
 </head>
@@ -215,7 +230,8 @@
                 <div class="rank-number">0</div>
                 <div class="role-icon">${icon}</div>
                 <div class="member-name">${name}</div>
-                <div style="cursor: grab; color: #ccc;">☰</div>
+                <button class="add-btn" onclick="moveToQueue(this)" title="เพิ่มเข้าคิว">+</button>
+                <div style="cursor: grab; color: #ccc;" title="ลากเพื่อสลับที่">☰</div>
             `;
 
             card.addEventListener('dragstart', dragStart);
@@ -228,6 +244,23 @@
         updateNumbers();
     }
 
+    // --- ระบบเพิ่มเข้าคิวอัตโนมัติ (ปุ่ม +) ---
+    function moveToQueue(btnElement) {
+        let card = btnElement.closest('.member-card');
+        let activeZone = document.getElementById('zone-active');
+        let waitZone = document.getElementById('zone-waiting');
+
+        // ถ้าห้องคิวหลักยังไม่เต็ม 12 คน ให้ใส่เข้าไปเลย
+        if (activeZone.children.length < 12) {
+            activeZone.appendChild(card);
+        } else {
+            // ถ้าเต็มแล้ว ให้ไปต่อท้ายห้องรอ
+            waitZone.appendChild(card);
+        }
+        
+        updateNumbers();
+    }
+
     // --- ระบบ Drag & Drop ---
     function dragStart(e) {
         this.classList.add('dragging');
@@ -235,7 +268,7 @@
 
     function dragEnd() {
         this.classList.remove('dragging');
-        updateNumbers(); // อัปเดตเลขลำดับทุกครั้งที่ลากเสร็จ
+        updateNumbers(); 
     }
 
     function setupDropZones() {
@@ -267,7 +300,6 @@
         });
     }
 
-    // คำนวณตำแหน่งเมาส์ว่าควรแทรกการ์ดไว้ตรงไหน
     function getDragAfterElement(container, y) {
         const draggableElements = [...container.querySelectorAll('.member-card:not(.dragging)')];
         return draggableElements.reduce((closest, child) => {
@@ -281,25 +313,23 @@
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    // --- ระบบปุ่ม เลื่อนคิว (Next Queue) แก้ใหม่ตามรีเควส ---
+    // --- ระบบปุ่ม เลื่อนคิว (Next Queue) ---
     function nextQueue() {
         const activeZone = document.getElementById('zone-active');
         const waitZone = document.getElementById('zone-waiting');
         const poolZone = document.getElementById('zone-pool');
 
-        // ถ้าคิวว่าง ไม่ต้องทำอะไร
         if (activeZone.children.length === 0) return;
 
-        // ดึงคนที่ 1 ออกมา
         const firstActive = activeZone.firstElementChild; 
         
-        // 1. ส่งอันดับ 1 กลับไปพักที่ "ห้องรวมสมาชิก" (ซ้ายสุด) ทันที
+        // ส่งอันดับ 1 กลับไปพักที่ "ห้องรวมสมาชิก" (ซ้ายสุด)
         poolZone.appendChild(firstActive);
         
-        // 2. เช็คว่ามีคนต่อคิวรอไหม ถ้ามี ดึงเข้ามาร่วมวงที่คิวหลัก
+        // เช็คว่ามีคนต่อคิวรอไหม ถ้ามี ดึงเข้ามาร่วมวงที่คิวหลัก
         if (waitZone.children.length > 0) {
             const firstWaiting = waitZone.firstElementChild; 
-            activeZone.appendChild(firstWaiting); // เสียบต่อท้ายคิวหลัก
+            activeZone.appendChild(firstWaiting); 
         }
 
         updateNumbers();
@@ -311,11 +341,9 @@
         const activeZone = document.getElementById('zone-active');
         const waitZone = document.getElementById('zone-waiting');
 
-        // อัปเดตตัวนับจำนวนคนในแต่ละห้อง
         document.getElementById('count-pool').innerText = `${poolZone.children.length} คน`;
         document.getElementById('count-waiting').innerText = `รอ ${waitZone.children.length} คน`;
 
-        // แจ้งเตือนสีแดงถ้าคิวหลักเกิน 12 คน
         if (activeZone.children.length > 12) {
             document.getElementById('count-active').style.color = '#ff8b94';
         } else {
@@ -323,32 +351,27 @@
         }
         document.getElementById('count-active').innerText = `${activeZone.children.length} / 12 คน`;
 
-        // อัปเดตป้าย "คิวปัจจุบัน"
         const currentDisplay = document.getElementById('current-turn-display');
         if (activeZone.children.length > 0) {
             const currentName = activeZone.firstElementChild.querySelector('.member-name').innerText;
             currentDisplay.innerHTML = `✨ ${currentName} ✨`;
-            // ไฮไลท์อันดับ 1 ให้นิดนึง
             activeZone.firstElementChild.style.borderLeft = "4px solid #d4af37";
         } else {
             currentDisplay.innerText = "- รอจัดคิว -";
         }
 
-        // ล้างไฮไลท์อันดับอื่นๆ
         [...activeZone.children].forEach((card, index) => {
             let rankElement = card.querySelector('.rank-number');
             rankElement.innerText = index + 1;
             if(index !== 0) card.style.borderLeft = "1px solid #eee";
         });
 
-        // รันเลข 1, 2, 3... ให้คิวรอ
         [...waitZone.children].forEach((card, index) => {
             let rankElement = card.querySelector('.rank-number');
             rankElement.innerText = index + 1;
             card.style.borderLeft = "1px solid #eee";
         });
         
-        // ล้างขอบคนในห้องรวม
         [...poolZone.children].forEach(card => {
             card.style.borderLeft = "1px solid #eee";
         });
