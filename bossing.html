@@ -32,12 +32,13 @@
             background: white; border-radius: 20px; padding: 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.03); 
             display: flex; flex-direction: column; max-height: 85vh;
+            /* 💡 พระเอกอยู่ตรงนี้: สั่งห้ามกล่องใหญ่ขยายความกว้างตามตัวอักษรเด็ดขาด */
+            min-width: 0; 
         }
         
-        /* 1. ห้องรวม (Member Pool) */
-        .roster-panel { flex: 1.3; border-top: 6px solid #e1eff9; } 
+        /* 1. ห้องรวม (Member Pool) - ขยายให้กว้างขึ้นอีก */
+        .roster-panel { flex: 1.6; border-top: 6px solid #e1eff9; } 
         
-        /* 💡 ล็อกขนาด Grid: ใช้ minmax(0, 1fr) เพื่อบังคับไม่ให้กล่องยืดตามความยาวชื่อ */
         .pool-grid {
             flex: 1; overflow-y: auto; display: grid; gap: 10px;
             grid-template-columns: repeat(2, minmax(0, 1fr)); 
@@ -46,10 +47,10 @@
         }
 
         /* 2. ห้องคิวหลัก (Active Queue) */
-        .queue-panel { flex: 1.5; border-top: 6px solid #a8e6cf; }
+        .queue-panel { flex: 1.3; border-top: 6px solid #a8e6cf; }
         
         /* 3. ห้องรอ (Waiting Queue) */
-        .waiting-panel { flex: 1; border-top: 6px solid #ffebba; }
+        .waiting-panel { flex: 1.1; border-top: 6px solid #ffebba; }
 
         .panel-header {
             display: flex; justify-content: space-between; align-items: center;
@@ -99,12 +100,12 @@
 
         /* --- การ์ดสมาชิก --- */
         .member-card {
-            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px; /* ลด padding แนวตั้ง */
+            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px;
             display: flex; align-items: center; gap: 8px; cursor: grab;
             box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: transform 0.1s;
             user-select: none; position: relative;
             
-            /* 💡 ล็อกความสูงให้ตายตัว การ์ดจะไม่ยืดหดดุกดิกแล้ว */
+            /* ล็อกความสูงและกว้างให้ตายตัว การ์ดจะไม่ยืดหดดุกดิก */
             height: 48px; 
             box-sizing: border-box;
             width: 100%;
@@ -114,7 +115,7 @@
         
         .role-icon { font-size: 18px; padding: 5px; background: #f9fbfc; border-radius: 8px; flex-shrink: 0;}
         
-        /* 💡 ล็อก Flexbox: สั่งให้ตัดชื่อยาวๆ ด้วย "..." เสมอแทนการดันกล่อง */
+        /* สั่งให้ตัดชื่อยาวๆ ด้วย "..." เสมอแทนการดันกล่อง */
         .member-name { 
             font-size: 13px; font-weight: 600; flex: 1; 
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -140,9 +141,9 @@
         .waiting-panel .member-card .rank-number { display: block; background: #f39c12; }
         
         /* จัดการการแสดงผล UI ภายในของแต่ละห้อง */
-        .roster-panel .member-card .rank-number { display: none; } /* ซ่อนเลขลำดับถ้าอยู่ห้องรวม */
+        .roster-panel .member-card .rank-number { display: none; } 
         .queue-panel .member-card .add-btn,
-        .waiting-panel .member-card .add-btn { display: none; } /* ซ่อนปุ่ม + ถ้าเข้ามาอยู่ในคิวแล้ว */
+        .waiting-panel .member-card .add-btn { display: none; } 
 
     </style>
 </head>
@@ -240,7 +241,7 @@
             card.innerHTML = `
                 <div class="rank-number">0</div>
                 <div class="role-icon">${icon}</div>
-                <div class="member-name">${name}</div>
+                <div class="member-name" title="${name}">${name}</div>
                 <button class="add-btn" onclick="moveToQueue(this)" title="เพิ่มเข้าคิว">+</button>
                 <div style="cursor: grab; color: #ccc;" title="ลากเพื่อสลับที่">☰</div>
             `;
