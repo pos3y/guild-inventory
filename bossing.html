@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guild Queue System ⏱️</title>
+    <!-- นำเข้าฟอนต์ Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <style>
+        /* --- ธีมหลัก --- */
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background-color: #f9fbfc; 
+            color: #4a4a4a; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 30px; }
+
+        .layout-container {
+            display: flex; gap: 20px; max-width: 1100px; margin: 0 auto;
+            flex-direction: column;
+        }
+        @media(min-width: 768px) {
+            .layout-container { flex-direction: row; }
+        }
+
+        /* --- ฝั่งซ้าย: Member Pool --- */
+        .roster-panel {
+            flex: 1; background: white; border-radius: 20px; padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03); border: 2px dashed #e1eff9;
+            display: flex; flex-direction: column; max-height: 85vh;
+        }
+        .roster-title { font-size: 18px; font-weight: 600; color: #7cb9e8; margin-top: 0; margin-bottom: 5px; }
+        
+        /* สไตล์ตารางกริดสำหรับฝั่งซ้าย (บ่อรายชื่อ) */
+        .member-pool {
+            flex: 1; overflow-y: auto; display: grid; gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            align-content: start; padding-bottom: 10px; min-height: 150px;
+        }
+
+        /* --- ฝั่งขวา: Queue Panel --- */
+        .queue-panel {
+            flex: 1.5; display: flex; flex-direction: column; gap: 15px;
+            background: white; border-radius: 20px; padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03); border-top: 6px solid #a8e6cf;
+        }
+        .queue-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px dashed #eee; padding-bottom: 15px; margin-bottom: 10px;
+        }
+        .queue-title { font-size: 20px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 10px; color: #4bba96;}
+        
+        .next-btn {
+            background: #4bba96; color: white; border: none; padding: 10px 20px;
+            border-radius: 20px; font-family: 'Prompt', sans-serif; font-weight: 600;
+            font-size: 15px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(75, 186, 150, 0.3);
+        }
+        .next-btn:hover { background: #3a9f7d; transform: translateY(-2px); }
+        .next-btn:active { transform: translateY(0); }
+
+        /* --- คิวหลัก (Active Queue) --- */
+        .queue-section {
+            background: #fdfdfd; border: 1px solid #f0f0f0; border-radius: 16px; 
+            padding: 15px; display: flex; flex-direction: column;
+        }
+        .section-title { font-size: 15px; font-weight: 600; margin: 0 0 10px 0; display: flex; justify-content: space-between; align-items: center;}
+        
+        /* สไตล์ตารางเรียงลำดับแนวตั้ง สำหรับคิวหลักและคิวรอ */
+        .vertical-list {
+            display: flex; flex-direction: column; gap: 8px;
+            min-height: 100px; padding: 10px; transition: all 0.2s; border-radius: 12px;
+            border: 2px dashed transparent;
+        }
+        .vertical-list.drag-over { background-color: #f0f8ff; border-color: #7cb9e8; }
+
+        /* สีตกแต่งโซนคิวหลักและรอ */
+        .active-q .section-title { color: #d4af37; }
+        .active-q .count-badge { background: #fffdf2; color: #d4af37; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+        
+        .wait-q .section-title { color: #ff8b94; }
+        .wait-q .count-badge { background: #fff0f0; color: #ff8b94; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+
+        /* --- การ์ดสมาชิก --- */
+        .member-card {
+            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 10px;
+            display: flex; align-items: center; gap: 10px; cursor: grab;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: transform 0.1s;
+            user-select: none; position: relative;
+        }
+        .member-card:hover { border-color: #7cb9e8; box-shadow: 0 4px 8px rgba(124,185,232,0.15);}
+        .member-card.dragging { opacity: 0.5; cursor: grabbing; border: 2px dashed #7cb9e8; }
+        
+        .role-icon { font-size: 18px; padding: 5px; background: #f9fbfc; border-radius: 8px; }
+        .member-name { font-size: 14px; font-weight: 600; flex: 1; }
+        
+        /* ตัวเลขลำดับ (จะโชว์เฉพาะเมื่ออยู่ฝั่งขวา) */
+        .rank-number {
+            display: none; width: 28px; height: 28px; background: #4a4a4a; color: white;
+            border-radius: 50%; text-align: center; line-height: 28px; font-size: 12px; font-weight: 600;
+        }
+        
+        .active-q .member-card .rank-number { display: block; background: #d4af37; }
+        .wait-q .member-card .rank-number { display: block; background: #ff8b94; }
+        .roster-panel .member-card .rank-number { display: none; } /* ซ่อนตัวเลขถ้าอยู่ฝั่งซ้าย */
+
+    </style>
+</head>
+<body>
+
+    <h1>⏱️ ระบบจัดคิวปาร์ตี้</h1>
+    
+    <div style="text-align: center; margin-bottom: 25px; margin-top: -15px;">
+        <a href="index.html" style="text-decoration: none; background: #f0f4f8; border: 1px solid #7cb9e8; color: #7cb9e8; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-right: 10px;">☁️ กลับคลังกิลด์</a>
+        <a href="party.html" style="text-decoration: none; background: #fffdf2; border: 1px solid #d4af37; color: #d4af37; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;">⚔️ ไปหน้าจัดปาร์ตี้</a>
+    </div>
+
+    <div class="layout-container">
+        
+        <!-- ฝั่งซ้าย: Member Pool -->
+        <div class="roster-panel">
+            <h3 class="roster-title">👥 รายชื่อสมาชิก</h3>
+            <p style="font-size: 12px; color: #888; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                ลากข้ามไปเรียงลำดับฝั่งขวา
+            </p>
+            <div class="member-pool drop-zone" id="zone-pool">
+                <!-- การ์ดสมาชิกจะโผล่ที่นี่ -->
+            </div>
+        </div>
+
+        <!-- ฝั่งขวา: Queue Panel -->
+        <div class="queue-panel">
+            <div class="queue-header">
+                <h3 class="queue-title">📋 ตารางคิว</h3>
+                <button class="next-btn" onclick="nextQueue()">▶️ เลื่อนคิวถัดไป</button>
+            </div>
+
+            <!-- คิวหลัก (Active 1-12) -->
+            <div class="queue-section active-q">
+                <div class="section-title">
+                    <span>👑 ปาร์ตี้หลัก (1-12)</span>
+                    <span class="count-badge" id="count-active">0 / 12 คน</span>
+                </div>
+                <!-- ลิสต์แนวตั้ง รองรับการลากสลับที่ -->
+                <div class="vertical-list drop-zone" id="zone-active"></div>
+            </div>
+
+            <!-- คิวรอ (Waiting) -->
+            <div class="queue-section wait-q">
+                <div class="section-title">
+                    <span>⏳ รอคิว (Waiting)</span>
+                    <span class="count-badge" id="count-waiting">รอ 0 คน</span>
+                </div>
+                <div class="vertical-list drop-zone" id="zone-waiting"></div>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
+    
+    let members = [];
+    
+    function fetchMembers() {
+        let noCache = '&t=' + new Date().getTime(); 
+        Papa.parse(URL_MEMBERS + noCache, { 
+            download: true, header: true, 
+            complete: function(results) {
+                members = results.data.filter(row => row['ชื่อตัวละคร (IGN)']);
+                // เรียงตามอักษร ก-ฮ
+                members.sort((a, b) => (a['ชื่อตัวละคร (IGN)'] || '').trim().localeCompare((b['ชื่อตัวละคร (IGN)'] || '').trim(), 'th'));
+                renderPool();
+            }
+        });
+    }
+
+    function getBaseIcon(roleText) {
+        if (!roleText) return '👤'; 
+        let r = roleText.toLowerCase();
+        if (r.includes('tank')) return '🛡️';
+        if (r.includes('support')) return '💖';
+        return '⚔️'; 
+    }
+
+    function renderPool() {
+        const pool = document.getElementById('zone-pool');
+        pool.innerHTML = '';
+        
+        members.forEach((m, index) => {
+            let name = m['ชื่อตัวละคร (IGN)'].trim();
+            let icon = getBaseIcon(m['ตำแหน่ง(หลัก)']);
+
+            let card = document.createElement('div');
+            card.className = 'member-card';
+            card.draggable = true;
+            card.id = 'member-q-' + index;
+
+            card.innerHTML = `
+                <div class="rank-number">0</div>
+                <div class="role-icon">${icon}</div>
+                <div class="member-name">${name}</div>
+                <div style="cursor: grab; color: #ccc;">☰</div>
+            `;
+
+            card.addEventListener('dragstart', dragStart);
+            card.addEventListener('dragend', dragEnd);
+
+            pool.appendChild(card);
+        });
+
+        setupDropZones();
+        updateNumbers();
+    }
+
+    // --- ระบบ Drag & Drop แบบเรียงลำดับอิสระ (Sortable) ---
+    function dragStart(e) {
+        this.classList.add('dragging');
+    }
+
+    function dragEnd() {
+        this.classList.remove('dragging');
+        updateNumbers(); // อัปเดตเลขลำดับทุกครั้งที่ลากเสร็จ
+    }
+
+    function setupDropZones() {
+        const zones = document.querySelectorAll('.drop-zone');
+        zones.forEach(zone => {
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault(); 
+                this.classList.add('drag-over');
+
+                // ลอจิกให้สามารถแทรกกลางระหว่างการ์ดใบอื่นได้
+                const draggable = document.querySelector('.dragging');
+                if (draggable) {
+                    const afterElement = getDragAfterElement(this, e.clientY);
+                    if (afterElement == null) {
+                        this.appendChild(draggable);
+                    } else {
+                        this.insertBefore(draggable, afterElement);
+                    }
+                }
+            });
+            
+            zone.addEventListener('dragleave', function(e) {
+                this.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+            });
+        });
+    }
+
+    // ฟังก์ชันคำนวณตำแหน่งเมาส์ ว่าควรแทรกการ์ดไว้ตรงไหน
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.member-card:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            // เช็คตำแหน่งกึ่งกลางของกล่อง
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // --- ระบบปุ่ม เลื่อนคิว (Next Queue) ---
+    function nextQueue() {
+        const activeZone = document.getElementById('zone-active');
+        const waitZone = document.getElementById('zone-waiting');
+
+        // ถ้าไม่มีใครอยู่ในคิวเลย ไม่ต้องทำอะไร
+        if (activeZone.children.length === 0) return;
+
+        const firstActive = activeZone.firstElementChild; // คนที่ 1 ปัจจุบัน
+
+        if (waitZone.children.length > 0) {
+            // กรณีมีคนรอคิว
+            const firstWaiting = waitZone.firstElementChild; // คนรอคิวเบอร์ 1
+            
+            // 1. ย้ายคนแรกลงไปต่อท้ายสุดของคิวรอ (ออกไปพัก)
+            waitZone.appendChild(firstActive);
+            
+            // 2. ดึงคนรอคิวเบอร์ 1 มาเสียบต่อท้ายคิวหลัก
+            activeZone.appendChild(firstWaiting);
+        } else {
+            // กรณีไม่มีคนรอคิว (มีแค่ตี้ 12 คนวนกันเอง)
+            // เอาอันดับ 1 ลงไปต่อท้ายอันดับสุดท้ายในคิวตัวเอง
+            activeZone.appendChild(firstActive);
+        }
+
+        // อัปเดตตัวเลขใหม่ทั้งหมด
+        updateNumbers();
+    }
+
+    // --- ระบบรันเลขลำดับ (Auto-Numbering) ---
+    function updateNumbers() {
+        const activeZone = document.getElementById('zone-active');
+        const waitZone = document.getElementById('zone-waiting');
+
+        // แจ้งเตือนสีแดงถ้าคิวหลักเกิน 12 คน
+        if (activeZone.children.length > 12) {
+            document.getElementById('count-active').style.color = 'red';
+        } else {
+            document.getElementById('count-active').style.color = '#d4af37';
+        }
+        document.getElementById('count-active').innerText = `${activeZone.children.length} / 12 คน`;
+        document.getElementById('count-waiting').innerText = `รอ ${waitZone.children.length} คน`;
+
+        // รันเลข 1, 2, 3... ให้คิวหลัก
+        [...activeZone.children].forEach((card, index) => {
+            let rankElement = card.querySelector('.rank-number');
+            rankElement.innerText = index + 1;
+        });
+
+        // รันเลข 1, 2, 3... ให้คิวรอ (เป็นลำดับคิวของเขาเอง)
+        [...waitZone.children].forEach((card, index) => {
+            let rankElement = card.querySelector('.rank-number');
+            rankElement.innerText = index + 1;
+        });
+    }
+
+    window.onload = fetchMembers;
+</script>
+
+</body>
+</html>
