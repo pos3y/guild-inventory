@@ -16,10 +16,7 @@
         @media(min-width: 900px) { .layout-container { flex-direction: row; align-items: flex-start; } }
 
         .panel { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; max-height: 85vh; min-width: 0; }
-        
-        /* ซ่อนห้องสมาชิก (เพราะคนดูไม่ต้องเห็นรายชื่อรอจัด) */
         .roster-panel { display: none; } 
-        
         .queue-panel { flex: 1.5; border-top: 6px solid #a8e6cf; }
         .waiting-panel { flex: 1.1; border-top: 6px solid #ffebba; }
 
@@ -27,10 +24,14 @@
         .panel-title { font-size: 18px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px;}
         .count-badge { padding: 3px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
 
-        .queue-panel .panel-title { color: #4bba96; }
-        .queue-panel .count-badge { background: #f2fcf9; color: #4bba96; }
-        .waiting-panel .panel-title { color: #f39c12; }
-        .waiting-panel .count-badge { background: #fffdf2; color: #f39c12; }
+        .queue-panel .panel-title { color: #4bba96; } .queue-panel .count-badge { background: #f2fcf9; color: #4bba96; }
+        .waiting-panel .panel-title { color: #f39c12; } .waiting-panel .count-badge { background: #fffdf2; color: #f39c12; }
+
+        /* --- Boss Display Box (อ่านอย่างเดียว) --- */
+        .boss-display-box {
+            background: #fdf5f6; border: 1px solid #ffc6c9; border-radius: 16px; padding: 12px;
+            text-align: center; margin-bottom: 15px; color: #ff8b94; font-weight: 600; font-size: 15px;
+        }
 
         .current-turn-box { background: linear-gradient(135deg, #fffdf2 0%, #ffffff 100%); border: 2px solid #ffebba; border-radius: 16px; padding: 15px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.1); }
         .current-turn-label { font-size: 12px; color: #a0a0a0; margin-bottom: 5px; font-weight: 600;}
@@ -38,21 +39,11 @@
 
         .vertical-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 150px; padding: 10px; border-radius: 12px; }
 
-        .member-card {
-            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px;
-            display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-            height: 48px; box-sizing: border-box; width: 100%;
-            cursor: default; /* เปลี่ยนเคอร์เซอร์เป็นปกติ ห้ามลาก */
-        }
-        
+        .member-card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); height: 48px; box-sizing: border-box; width: 100%; cursor: default; }
         .role-icon { font-size: 18px; padding: 5px; background: #f9fbfc; border-radius: 8px; flex-shrink: 0;}
         .member-name { font-size: 13px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         
-        .rank-number {
-            display: none; width: 28px; height: 28px; background: #4a4a4a; color: white;
-            border-radius: 50%; text-align: center; line-height: 28px; font-size: 12px; font-weight: 600; flex-shrink: 0;
-        }
-        
+        .rank-number { display: none; width: 28px; height: 28px; background: #4a4a4a; color: white; border-radius: 50%; text-align: center; line-height: 28px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
         .queue-panel .member-card .rank-number { display: block; background: #4bba96; }
         .waiting-panel .member-card .rank-number { display: block; background: #f39c12; }
     </style>
@@ -69,6 +60,11 @@
                 <span class="count-badge" id="count-active">0 / 12 คน</span>
             </div>
             
+            <!-- ป้ายโชว์สถานะบอสปัจจุบัน -->
+            <div class="boss-display-box" id="boss-display">
+                กำลังโหลดสถานะบอส...
+            </div>
+
             <div class="current-turn-box">
                 <div class="current-turn-label">🎯 คิวปัจจุบัน (อันดับ 1)</div>
                 <div class="current-turn-name" id="current-turn-display">กำลังโหลดคิว...</div>
@@ -88,9 +84,6 @@
     </div>
 
 <script>
-    // ----------------------------------------------------
-    // 1. ตั้งค่าฐานข้อมูล Firebase เดียวกันกับของแอดมิน
-    // ----------------------------------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyCIjmulnl7kcmOhH_w1jSk6-Fms-VQkhsw",
       authDomain: "friendbossqueue.firebaseapp.com",
@@ -103,7 +96,6 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
     
     let allMembers = [];   
@@ -125,11 +117,18 @@
     }
 
     function listenToFirebase() {
+        // ฟังข้อมูลคิว
         db.ref('queues').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             activeQueue = data.active || [];
             waitingQueue = data.waiting || [];
             renderAllZones(); 
+        });
+
+        // ฟังข้อมูลบอสเคาน์เตอร์
+        db.ref('bossState').on('value', (snapshot) => {
+            const data = snapshot.val() || { current: 1, total: 10 };
+            document.getElementById('boss-display').innerText = `👾 กำลังลุยบอสตัวที่: ${data.current} / ${data.total}`;
         });
     }
 
@@ -141,7 +140,6 @@
         return '⚔️'; 
     }
 
-    // สร้างการ์ด (เอาปุ่มลากและปุ่มกด + ออกหมดแล้ว)
     function createCard(name, role) {
         let icon = getBaseIcon(role);
         let card = document.createElement('div');
@@ -160,8 +158,7 @@
         const activeZone = document.getElementById('zone-active');
         const waitZone = document.getElementById('zone-waiting');
 
-        activeZone.innerHTML = '';
-        waitZone.innerHTML = '';
+        activeZone.innerHTML = ''; waitZone.innerHTML = '';
 
         activeQueue.forEach(name => {
             let memberData = allMembers.find(m => m.name === name);
@@ -182,11 +179,7 @@
 
         document.getElementById('count-waiting').innerText = `รอ ${waitZone.children.length} คน`;
 
-        if (activeZone.children.length > 12) {
-            document.getElementById('count-active').style.color = '#ff8b94';
-        } else {
-            document.getElementById('count-active').style.color = '#4bba96';
-        }
+        if (activeZone.children.length > 12) { document.getElementById('count-active').style.color = '#ff8b94'; } else { document.getElementById('count-active').style.color = '#4bba96'; }
         document.getElementById('count-active').innerText = `${activeZone.children.length} / 12 คน`;
 
         const currentDisplay = document.getElementById('current-turn-display');
