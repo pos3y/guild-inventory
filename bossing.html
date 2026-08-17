@@ -35,16 +35,20 @@
             text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px;
         }
         .boss-counter-title { font-size: 13px; font-weight: 600; color: #ff8b94; margin: 0; }
-        .boss-controls { display: flex; align-items: center; gap: 10px; font-weight: bold; color: #ff8b94; }
+        .boss-controls { display: flex; align-items: baseline; gap: 10px; font-weight: bold; color: #ff8b94; }
         .boss-controls input {
             width: 45px; text-align: center; font-family: 'Prompt'; font-weight: bold; font-size: 16px;
             border: 1px solid #ffc6c9; border-radius: 8px; padding: 4px; color: #4a4a4a;
         }
-        .boss-btn {
-            background: white; border: 1px solid #ffc6c9; color: #ff8b94; border-radius: 8px;
-            width: 30px; height: 30px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s;
+        
+        .boss-action-group { display: flex; gap: 8px; margin-top: 5px; width: 100%; justify-content: center;}
+        .boss-action-btn {
+            background: white; border: 1px solid #ff8b94; color: #ff8b94; border-radius: 8px;
+            padding: 6px 12px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; font-family: 'Prompt';
         }
-        .boss-btn:hover { background: #ff8b94; color: white; }
+        .boss-action-btn:hover { background: #ff8b94; color: white; }
+        .boss-action-btn.reset { border-color: #ccc; color: #888; }
+        .boss-action-btn.reset:hover { background: #ccc; color: white; }
 
         .current-turn-box { background: linear-gradient(135deg, #fffdf2 0%, #ffffff 100%); border: 2px solid #ffebba; border-radius: 16px; padding: 15px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.1); }
         .current-turn-label { font-size: 12px; color: #a0a0a0; margin-bottom: 5px; font-weight: 600;}
@@ -97,15 +101,17 @@
                 <span class="count-badge" id="count-active">0 / 12 คน</span>
             </div>
 
-            <!-- ตัวนับบอส -->
+            <!-- ตัวนับบอส (ปรับใหม่) -->
             <div class="boss-counter-box">
                 <div class="boss-counter-title">👾 กำลังลุยบอสตัวที่</div>
                 <div class="boss-controls">
-                    <button class="boss-btn" onclick="changeBoss(-1)">-</button>
-                    <input type="number" id="current-boss" value="1" onchange="saveBossToFirebase()">
-                    <span>/</span>
+                    <span id="display-current-boss" style="font-size: 26px; color: #ff8b94;">1</span>
+                    <span style="font-size: 18px; color: #aaa;">/</span>
                     <input type="number" id="total-boss" value="10" onchange="saveBossToFirebase()">
-                    <button class="boss-btn" onclick="changeBoss(1)">+</button>
+                </div>
+                <div class="boss-action-group">
+                    <button class="boss-action-btn" onclick="nextBoss()">⚔️ ตีเสร็จแล้ว (ถัดไป)</button>
+                    <button class="boss-action-btn reset" onclick="resetBoss()">🔄 รีเซ็ต</button>
                 </div>
             </div>
             
@@ -170,7 +176,6 @@
     }
 
     function listenToFirebase() {
-        // ฟังข้อมูลคิว
         db.ref('queues').on('value', (snapshot) => {
             if (isDragging) return; 
             const data = snapshot.val() || {};
@@ -179,25 +184,33 @@
             renderAllZones(); 
         });
 
-        // ฟังข้อมูลบอสเคาน์เตอร์
         db.ref('bossState').on('value', (snapshot) => {
             const data = snapshot.val() || { current: 1, total: 10 };
-            document.getElementById('current-boss').value = data.current;
+            document.getElementById('display-current-boss').innerText = data.current;
             document.getElementById('total-boss').value = data.total;
         });
     }
 
-    // --- ระบบตัวนับบอส ---
-    function changeBoss(amount) {
-        let currInput = document.getElementById('current-boss');
-        let newVal = parseInt(currInput.value) + amount;
-        if(newVal < 1) newVal = 1; // ห้ามน้อยกว่า 1
-        currInput.value = newVal;
-        saveBossToFirebase();
+    // --- ระบบตัวนับบอส (ปรับใหม่) ---
+    function nextBoss() {
+        let current = parseInt(document.getElementById('display-current-boss').innerText) || 1;
+        let total = parseInt(document.getElementById('total-boss').value) || 10;
+        
+        if (current >= total) {
+            current = 1; // ถ้าถึงตัวสุดท้ายแล้วกดถัดไป ให้วนกลับไปเริ่ม 1 ใหม่
+        } else {
+            current++;
+        }
+        db.ref('bossState').set({ current: current, total: total });
+    }
+
+    function resetBoss() {
+        let total = parseInt(document.getElementById('total-boss').value) || 10;
+        db.ref('bossState').set({ current: 1, total: total }); // รีเซ็ตกลับไป 1
     }
 
     function saveBossToFirebase() {
-        let current = parseInt(document.getElementById('current-boss').value) || 1;
+        let current = parseInt(document.getElementById('display-current-boss').innerText) || 1;
         let total = parseInt(document.getElementById('total-boss').value) || 10;
         db.ref('bossState').set({ current: current, total: total });
     }
@@ -209,7 +222,6 @@
             return;
         }
         if (confirm("🎲 ต้องการ 'สุ่มลำดับ' ทุกคนในคิวหลักใหม่ใช่หรือไม่?")) {
-            // อัลกอริทึมสลับตำแหน่ง (Fisher-Yates)
             for (let i = activeQueue.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [activeQueue[i], activeQueue[j]] = [activeQueue[j], activeQueue[i]];
@@ -218,7 +230,6 @@
         }
     }
 
-    // --- ฟังก์ชันพื้นฐานอื่นๆ ---
     function saveQueuesToFirebase() {
         const zoneActive = document.getElementById('zone-active');
         const zoneWaiting = document.getElementById('zone-waiting');
@@ -287,16 +298,20 @@
         db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
     }
 
+    // แก้ไขระบบจบเทิร์น ให้รีเซ็ตบอสอัตโนมัติด้วย
     function nextQueue() {
         if (activeQueue.length === 0) return;
         activeQueue.shift(); 
         if (waitingQueue.length > 0) { activeQueue.push(waitingQueue.shift()); }
         db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
+        
+        resetBoss(); // กดจบเทิร์น = เปลี่ยนคน = บอสตัวที่ 1 ใหม่
     }
 
     function clearQueue() {
         if (confirm("⚠️ แน่ใจหรือไม่ว่าต้องการ 'ล้างคิวทั้งหมด'?\n(สมาชิกทุกคนจะถูกส่งกลับไปที่ห้องรวมทันที)")) {
             db.ref('queues').set({ active: [], waiting: [] });
+            resetBoss();
         }
     }
 
