@@ -4,175 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guild Queue System ⏱️</title>
-    <!-- นำเข้าฟอนต์ Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
-    
-    <!-- นำเข้า PapaParse สำหรับอ่าน Sheet -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-
-    <!-- นำเข้า Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
     <style>
-        /* --- ธีมหลัก --- */
-        body { 
-            font-family: 'Prompt', sans-serif; 
-            background-color: #f9fbfc; 
-            color: #4a4a4a; 
-            margin: 0; 
-            padding: 20px; 
-        }
+        body { font-family: 'Prompt', sans-serif; background-color: #f9fbfc; color: #4a4a4a; margin: 0; padding: 20px; }
         h1 { text-align: center; color: #7cb9e8; font-weight: 600; margin-bottom: 30px; }
+        .layout-container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-direction: column; }
+        @media(min-width: 900px) { .layout-container { flex-direction: row; align-items: flex-start; } }
 
-        .layout-container {
-            display: flex; gap: 20px; max-width: 1200px; margin: 0 auto;
-            flex-direction: column;
-        }
-        @media(min-width: 900px) {
-            .layout-container { flex-direction: row; align-items: flex-start; }
-        }
-
-        /* --- สไตล์กล่องหลักของแต่ละห้อง --- */
-        .panel {
-            background: white; border-radius: 20px; padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.03); 
-            display: flex; flex-direction: column; max-height: 85vh;
-            min-width: 0; 
-        }
-        
+        .panel { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; max-height: 85vh; min-width: 0; }
         .roster-panel { flex: 1.6; border-top: 6px solid #e1eff9; } 
-        
-        .pool-grid {
-            flex: 1; overflow-y: auto; display: grid; gap: 10px;
-            grid-template-columns: repeat(2, minmax(0, 1fr)); 
-            align-content: start; padding: 10px; min-height: 200px;
-            border: 2px dashed transparent; border-radius: 12px; transition: 0.2s;
-        }
-
+        .pool-grid { flex: 1; overflow-y: auto; display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; padding: 10px; min-height: 200px; border: 2px dashed transparent; border-radius: 12px; transition: 0.2s; }
         .queue-panel { flex: 1.3; border-top: 6px solid #a8e6cf; }
         .waiting-panel { flex: 1.1; border-top: 6px solid #ffebba; }
 
-        .panel-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px dashed #eee; padding-bottom: 12px; margin-bottom: 15px;
-        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #eee; padding-bottom: 12px; margin-bottom: 15px; }
         .panel-title { font-size: 18px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px;}
         .count-badge { padding: 3px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
 
-        /* สีตกแต่งแยกตามห้อง */
-        .roster-panel .panel-title { color: #7cb9e8; }
-        .roster-panel .count-badge { background: #f0f8ff; color: #7cb9e8; }
-        
-        .queue-panel .panel-title { color: #4bba96; }
-        .queue-panel .count-badge { background: #f2fcf9; color: #4bba96; }
+        .roster-panel .panel-title { color: #7cb9e8; } .roster-panel .count-badge { background: #f0f8ff; color: #7cb9e8; }
+        .queue-panel .panel-title { color: #4bba96; } .queue-panel .count-badge { background: #f2fcf9; color: #4bba96; }
+        .waiting-panel .panel-title { color: #f39c12; } .waiting-panel .count-badge { background: #fffdf2; color: #f39c12; }
 
-        .waiting-panel .panel-title { color: #f39c12; }
-        .waiting-panel .count-badge { background: #fffdf2; color: #f39c12; }
-
-        /* --- ป้ายแสดงคิวปัจจุบัน --- */
-        .current-turn-box {
-            background: linear-gradient(135deg, #fffdf2 0%, #ffffff 100%);
-            border: 2px solid #ffebba; border-radius: 16px; padding: 15px;
-            text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.1);
+        /* --- Boss Counter Box --- */
+        .boss-counter-box {
+            background: #fdf5f6; border: 1px solid #ffc6c9; border-radius: 16px; padding: 10px;
+            text-align: center; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px;
         }
+        .boss-counter-title { font-size: 13px; font-weight: 600; color: #ff8b94; margin: 0; }
+        .boss-controls { display: flex; align-items: center; gap: 10px; font-weight: bold; color: #ff8b94; }
+        .boss-controls input {
+            width: 45px; text-align: center; font-family: 'Prompt'; font-weight: bold; font-size: 16px;
+            border: 1px solid #ffc6c9; border-radius: 8px; padding: 4px; color: #4a4a4a;
+        }
+        .boss-btn {
+            background: white; border: 1px solid #ffc6c9; color: #ff8b94; border-radius: 8px;
+            width: 30px; height: 30px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s;
+        }
+        .boss-btn:hover { background: #ff8b94; color: white; }
+
+        .current-turn-box { background: linear-gradient(135deg, #fffdf2 0%, #ffffff 100%); border: 2px solid #ffebba; border-radius: 16px; padding: 15px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.1); }
         .current-turn-label { font-size: 12px; color: #a0a0a0; margin-bottom: 5px; font-weight: 600;}
         .current-turn-name { font-size: 20px; font-weight: 600; color: #d4af37; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 
-        /* --- ปุ่มเลื่อนคิว --- */
-        .next-btn {
-            background: #4bba96; color: white; border: none; padding: 10px 15px;
-            border-radius: 20px; font-family: 'Prompt', sans-serif; font-weight: 600;
-            font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(75, 186, 150, 0.3);
-            width: 100%; margin-bottom: 15px;
+        .action-buttons { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;}
+        .action-btn {
+            color: white; border: none; padding: 10px; border-radius: 12px; font-family: 'Prompt', sans-serif;
+            font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; flex: 1; min-width: 80px;
         }
-        .next-btn:hover { background: #3a9f7d; transform: translateY(-2px); }
-        .next-btn:active { transform: translateY(0); }
-
-        /* --- ปุ่มล้างคิว (มุมขวาล่างของจอ) --- */
-        .clear-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #ff8b94; 
-            color: white; 
-            border: none; 
-            padding: 10px 15px;
-            border-radius: 20px; 
-            font-family: 'Prompt', sans-serif; 
-            font-weight: 600;
-            font-size: 13px; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            box-shadow: 0 4px 10px rgba(255, 139, 148, 0.3);
-            z-index: 100;
-        }
+        .btn-next { background: #4bba96; box-shadow: 0 4px 10px rgba(75, 186, 150, 0.3); } .btn-next:hover { background: #3a9f7d; transform: translateY(-2px); }
+        .btn-shuffle { background: #7cb9e8; box-shadow: 0 4px 10px rgba(124, 185, 232, 0.3); } .btn-shuffle:hover { background: #5a9bc8; transform: translateY(-2px); }
+        
+        .clear-btn { position: fixed; bottom: 20px; right: 20px; background: #ff8b94; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-family: 'Prompt'; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(255, 139, 148, 0.3); z-index: 100; }
         .clear-btn:hover { background: #e07a82; transform: translateY(-2px); }
-        .clear-btn:active { transform: translateY(0); }
 
-        /* --- ลิสต์แนวตั้ง --- */
-        .vertical-list {
-            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-            min-height: 150px; padding: 10px; transition: all 0.2s; border-radius: 12px;
-            border: 2px dashed transparent;
-        }
-
+        .vertical-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 150px; padding: 10px; transition: all 0.2s; border-radius: 12px; border: 2px dashed transparent; }
         .drop-zone.drag-over { background-color: #f0f8ff; border-color: #7cb9e8; }
 
-        /* --- การ์ดสมาชิก --- */
-        .member-card {
-            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px;
-            display: flex; align-items: center; gap: 8px; cursor: grab;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: transform 0.1s;
-            user-select: none; position: relative;
-            
-            height: 48px; 
-            box-sizing: border-box;
-            width: 100%;
-        }
-        .member-card:hover { border-color: #7cb9e8; box-shadow: 0 4px 8px rgba(124,185,232,0.15);}
-        .member-card.dragging { opacity: 0.5; cursor: grabbing; border: 2px dashed #7cb9e8; }
-        
+        .member-card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 0 10px; display: flex; align-items: center; gap: 8px; cursor: grab; box-shadow: 0 2px 5px rgba(0,0,0,0.02); height: 48px; box-sizing: border-box; width: 100%; }
+        .member-card:hover { border-color: #7cb9e8; } .member-card.dragging { opacity: 0.5; border: 2px dashed #7cb9e8; }
         .role-icon { font-size: 18px; padding: 5px; background: #f9fbfc; border-radius: 8px; flex-shrink: 0;}
-        
-        .member-name { 
-            font-size: 13px; font-weight: 600; flex: 1; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            min-width: 0; 
-        }
-        
-        .add-btn {
-            background: #e1eff9; color: #7cb9e8; border: none; border-radius: 50%;
-            width: 26px; height: 26px; font-weight: bold; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: 0.2s; font-size: 16px; flex-shrink: 0;
-        }
+        .member-name { font-size: 13px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .add-btn { background: #e1eff9; color: #7cb9e8; border: none; border-radius: 50%; width: 26px; height: 26px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
         .add-btn:hover { background: #7cb9e8; color: white; }
-
-        .rank-number {
-            display: none; width: 28px; height: 28px; background: #4a4a4a; color: white;
-            border-radius: 50%; text-align: center; line-height: 28px; font-size: 12px; font-weight: 600; flex-shrink: 0;
-        }
-        
-        .queue-panel .member-card .rank-number { display: block; background: #4bba96; }
-        .waiting-panel .member-card .rank-number { display: block; background: #f39c12; }
-        
-        .roster-panel .member-card .rank-number { display: none; } 
-        .queue-panel .member-card .add-btn,
-        .waiting-panel .member-card .add-btn { display: none; } 
-
+        .rank-number { display: none; width: 28px; height: 28px; background: #4a4a4a; color: white; border-radius: 50%; text-align: center; line-height: 28px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+        .queue-panel .member-card .rank-number { display: block; background: #4bba96; } .waiting-panel .member-card .rank-number { display: block; background: #f39c12; }
+        .roster-panel .member-card .rank-number { display: none; } .queue-panel .member-card .add-btn, .waiting-panel .member-card .add-btn { display: none; } 
     </style>
 </head>
 <body>
 
-    <!-- ปุ่มล้างคิว มุมขวาล่าง -->
     <button class="clear-btn" onclick="clearQueue()">🗑️ ล้างคิว</button>
 
     <h1>⏱️ ระบบจัดคิวปาร์ตี้</h1>
     
     <div class="layout-container">
         
-        <!-- ห้อง 1: สมาชิก (Member Pool) -->
         <div class="panel roster-panel">
             <div class="panel-header">
                 <h3 class="panel-title">👥 สมาชิก</h3>
@@ -181,11 +91,22 @@
             <div class="pool-grid drop-zone" id="zone-pool"></div>
         </div>
 
-        <!-- ห้อง 2: คิวหลัก (Active Queue) -->
         <div class="panel queue-panel">
             <div class="panel-header">
                 <h3 class="panel-title">📋 ห้องคิวหลัก (1-12)</h3>
                 <span class="count-badge" id="count-active">0 / 12 คน</span>
+            </div>
+
+            <!-- ตัวนับบอส -->
+            <div class="boss-counter-box">
+                <div class="boss-counter-title">👾 กำลังลุยบอสตัวที่</div>
+                <div class="boss-controls">
+                    <button class="boss-btn" onclick="changeBoss(-1)">-</button>
+                    <input type="number" id="current-boss" value="1" onchange="saveBossToFirebase()">
+                    <span>/</span>
+                    <input type="number" id="total-boss" value="10" onchange="saveBossToFirebase()">
+                    <button class="boss-btn" onclick="changeBoss(1)">+</button>
+                </div>
             </div>
             
             <div class="current-turn-box">
@@ -193,20 +114,20 @@
                 <div class="current-turn-name" id="current-turn-display">กำลังโหลดคิว...</div>
             </div>
 
-            <!-- ปุ่มเลื่อนคิว (กว้างเต็มเหมือนเดิม) -->
-            <button class="next-btn" onclick="nextQueue()">▶️ จบเทิร์น (เลื่อนคิวถัดไป)</button>
+            <!-- ปุ่มควบคุมคิวและสุ่ม -->
+            <div class="action-buttons">
+                <button class="action-btn btn-next" onclick="nextQueue()">▶️ จบเทิร์น</button>
+                <button class="action-btn btn-shuffle" onclick="shuffleQueue()">🎲 สุ่มคิว</button>
+            </div>
 
             <div class="vertical-list drop-zone" id="zone-active"></div>
         </div>
 
-        <!-- ห้อง 3: คิวรอ (Waiting) -->
         <div class="panel waiting-panel">
             <div class="panel-header">
                 <h3 class="panel-title">⏳ ห้องรอคิว</h3>
                 <span class="count-badge" id="count-waiting">รอ 0 คน</span>
             </div>
-            <p style="font-size: 11px; color: #aaa; text-align: center; margin-top: -10px;">(จะถูกดึงเข้าห้องคิวหลักอัตโนมัติ)</p>
-            
             <div class="vertical-list drop-zone" id="zone-waiting"></div>
         </div>
 
@@ -220,13 +141,11 @@
       projectId: "friendbossqueue",
       storageBucket: "friendbossqueue.firebasestorage.app",
       messagingSenderId: "269204814389",
-      appId: "1:269204814389:web:98ae14ec160dcfb90dcf7c",
-      measurementId: "G-03R1X1L4EQ"
+      appId: "1:269204814389:web:98ae14ec160dcfb90dcf7c"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     const URL_MEMBERS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9vhvIhGr5ZWf2qc1lZkDxHXF4-1fL-t9Lv0PsMcos_87S934rav15rgRxhNbRCKdIoCwF1bi4eivD/pub?gid=0&single=true&output=csv';
     
     let allMembers = [];   
@@ -241,10 +160,7 @@
             complete: function(results) {
                 let parsed = results.data.filter(row => row['ชื่อตัวละคร (IGN)']);
                 allMembers = parsed.map(row => {
-                    return {
-                        name: row['ชื่อตัวละคร (IGN)'].trim(),
-                        role: row['ตำแหน่ง(หลัก)'] || 'DPS'
-                    }
+                    return { name: row['ชื่อตัวละคร (IGN)'].trim(), role: row['ตำแหน่ง(หลัก)'] || 'DPS' }
                 }).sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
                 listenToFirebase();
@@ -254,28 +170,61 @@
     }
 
     function listenToFirebase() {
+        // ฟังข้อมูลคิว
         db.ref('queues').on('value', (snapshot) => {
             if (isDragging) return; 
-
             const data = snapshot.val() || {};
             activeQueue = data.active || [];
             waitingQueue = data.waiting || [];
-            
             renderAllZones(); 
+        });
+
+        // ฟังข้อมูลบอสเคาน์เตอร์
+        db.ref('bossState').on('value', (snapshot) => {
+            const data = snapshot.val() || { current: 1, total: 10 };
+            document.getElementById('current-boss').value = data.current;
+            document.getElementById('total-boss').value = data.total;
         });
     }
 
+    // --- ระบบตัวนับบอส ---
+    function changeBoss(amount) {
+        let currInput = document.getElementById('current-boss');
+        let newVal = parseInt(currInput.value) + amount;
+        if(newVal < 1) newVal = 1; // ห้ามน้อยกว่า 1
+        currInput.value = newVal;
+        saveBossToFirebase();
+    }
+
+    function saveBossToFirebase() {
+        let current = parseInt(document.getElementById('current-boss').value) || 1;
+        let total = parseInt(document.getElementById('total-boss').value) || 10;
+        db.ref('bossState').set({ current: current, total: total });
+    }
+
+    // --- ระบบสุ่มคิว ---
+    function shuffleQueue() {
+        if (activeQueue.length === 0) {
+            alert("ยังไม่มีคนในคิวหลักให้สุ่มครับ");
+            return;
+        }
+        if (confirm("🎲 ต้องการ 'สุ่มลำดับ' ทุกคนในคิวหลักใหม่ใช่หรือไม่?")) {
+            // อัลกอริทึมสลับตำแหน่ง (Fisher-Yates)
+            for (let i = activeQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [activeQueue[i], activeQueue[j]] = [activeQueue[j], activeQueue[i]];
+            }
+            db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
+        }
+    }
+
+    // --- ฟังก์ชันพื้นฐานอื่นๆ ---
     function saveQueuesToFirebase() {
         const zoneActive = document.getElementById('zone-active');
         const zoneWaiting = document.getElementById('zone-waiting');
-
         const newActive = [...zoneActive.children].map(card => card.dataset.name);
         const newWait = [...zoneWaiting.children].map(card => card.dataset.name);
-
-        db.ref('queues').set({
-            active: newActive,
-            waiting: newWait
-        });
+        db.ref('queues').set({ active: newActive, waiting: newWait });
     }
 
     function getBaseIcon(roleText) {
@@ -311,9 +260,7 @@
         const activeZone = document.getElementById('zone-active');
         const waitZone = document.getElementById('zone-waiting');
 
-        poolZone.innerHTML = '';
-        activeZone.innerHTML = '';
-        waitZone.innerHTML = '';
+        poolZone.innerHTML = ''; activeZone.innerHTML = ''; waitZone.innerHTML = '';
 
         activeQueue.forEach(name => {
             let memberData = allMembers.find(m => m.name === name);
@@ -336,25 +283,14 @@
 
     function moveToQueue(btnElement) {
         let name = btnElement.closest('.member-card').dataset.name;
-        
-        if (activeQueue.length < 12) {
-            activeQueue.push(name);
-        } else {
-            waitingQueue.push(name);
-        }
-        
+        if (activeQueue.length < 12) { activeQueue.push(name); } else { waitingQueue.push(name); }
         db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
     }
 
     function nextQueue() {
         if (activeQueue.length === 0) return;
-
         activeQueue.shift(); 
-        
-        if (waitingQueue.length > 0) {
-            activeQueue.push(waitingQueue.shift()); 
-        }
-
+        if (waitingQueue.length > 0) { activeQueue.push(waitingQueue.shift()); }
         db.ref('queues').set({ active: activeQueue, waiting: waitingQueue });
     }
 
@@ -364,43 +300,22 @@
         }
     }
 
-    function dragStart(e) {
-        isDragging = true;
-        this.classList.add('dragging');
-    }
-
-    function dragEnd() {
-        this.classList.remove('dragging');
-        isDragging = false;
-        saveQueuesToFirebase(); 
-    }
+    function dragStart(e) { isDragging = true; this.classList.add('dragging'); }
+    function dragEnd() { isDragging = false; this.classList.remove('dragging'); saveQueuesToFirebase(); }
 
     function setupDropZones() {
         const zones = document.querySelectorAll('.drop-zone');
         zones.forEach(zone => {
             zone.addEventListener('dragover', function(e) {
-                e.preventDefault(); 
-                this.classList.add('drag-over');
-
+                e.preventDefault(); this.classList.add('drag-over');
                 const draggable = document.querySelector('.dragging');
                 if (draggable) {
                     const afterElement = getDragAfterElement(this, e.clientY);
-                    if (afterElement == null) {
-                        this.appendChild(draggable);
-                    } else {
-                        this.insertBefore(draggable, afterElement);
-                    }
+                    if (afterElement == null) { this.appendChild(draggable); } else { this.insertBefore(draggable, afterElement); }
                 }
             });
-            
-            zone.addEventListener('dragleave', function(e) {
-                this.classList.remove('drag-over');
-            });
-
-            zone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                this.classList.remove('drag-over');
-            });
+            zone.addEventListener('dragleave', function(e) { this.classList.remove('drag-over'); });
+            zone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('drag-over'); });
         });
     }
 
@@ -409,11 +324,7 @@
         return draggableElements.reduce((closest, child) => {
             const box = child.getBoundingClientRect();
             const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
+            if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
@@ -425,11 +336,7 @@
         document.getElementById('count-pool').innerText = `${poolZone.children.length} คน`;
         document.getElementById('count-waiting').innerText = `รอ ${waitZone.children.length} คน`;
 
-        if (activeZone.children.length > 12) {
-            document.getElementById('count-active').style.color = '#ff8b94';
-        } else {
-            document.getElementById('count-active').style.color = '#4bba96';
-        }
+        if (activeZone.children.length > 12) { document.getElementById('count-active').style.color = '#ff8b94'; } else { document.getElementById('count-active').style.color = '#4bba96'; }
         document.getElementById('count-active').innerText = `${activeZone.children.length} / 12 คน`;
 
         const currentDisplay = document.getElementById('current-turn-display');
@@ -446,16 +353,12 @@
             rankElement.innerText = index + 1;
             if(index !== 0) card.style.borderLeft = "1px solid #eee";
         });
-
         [...waitZone.children].forEach((card, index) => {
             let rankElement = card.querySelector('.rank-number');
             rankElement.innerText = index + 1;
             card.style.borderLeft = "1px solid #eee";
         });
-        
-        [...poolZone.children].forEach(card => {
-            card.style.borderLeft = "1px solid #eee";
-        });
+        [...poolZone.children].forEach(card => { card.style.borderLeft = "1px solid #eee"; });
     }
 
     window.onload = init;
